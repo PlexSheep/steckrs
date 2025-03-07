@@ -1,5 +1,5 @@
 use std::any::Any;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -92,7 +92,7 @@ impl HookRegistry {
     ) -> HookResult<()> {
         let boxed_hook = BoxedHook::from(hook);
 
-        self.hooks.entry(id).or_insert(Vec::new()).push(boxed_hook);
+        self.hooks.entry(id).or_default().push(boxed_hook);
 
         Ok(())
     }
@@ -109,7 +109,7 @@ impl HookRegistry {
             Some(hooks) => {
                 for h in hooks {
                     if h.extension_point_type_id == std::any::TypeId::of::<E>() {
-                        return Some(h.hook.downcast_ref::<Hook<E>>()?);
+                        return h.hook.downcast_ref::<Hook<E>>();
                     }
                 }
                 None
