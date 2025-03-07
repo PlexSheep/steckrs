@@ -12,3 +12,5 @@ repository = "https://github.com/PlexSheep/steckrs"
 
 
 [dependencies]
+anyhow = "1.0.97"
+thiserror = "2.0.12"
