@@ -1,15 +1,14 @@
 [package]
-name = "base"
+name = "steckrs"
 version = "0.1.0"
 edition = "2021"
 publish = false
 authors = ["Christoph J. Scherr <software@cscherr.de>"]
-license = "GPL-3.0-or-later"
-description = "No description yet"
+license = "MIT"
+description = "small trait based plugin system for rust "
 readme = "README.md"
-homepage = "https://github.com/PlexSheep/rs-base"
-repository = "https://github.com/PlexSheep/rs-base"
-keywords = ["template"]
+homepage = "https://github.com/PlexSheep/steckrs"
+repository = "https://github.com/PlexSheep/steckrs"
 
 
 [dependencies]
