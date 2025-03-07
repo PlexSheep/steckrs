@@ -1,4 +1,4 @@
-use crate::hook::HookID;
+use crate::hook::ExtensionPointID;
 
 /// Result type for plugin operations
 pub type HookResult<T> = Result<T, HookError>;
@@ -32,8 +32,11 @@ pub enum HookError {
     NotFound(String),
 
     #[error("Hook not found: {0}")]
-    HookNotFound(HookID),
+    HookNotFound(ExtensionPointID),
 
     #[error("Plugin execution error: {0}")]
     ExecutionError(anyhow::Error),
+
+    #[error("Tried to register a hook for a ExtensionPointID that is not supported by the plugin manager")]
+    NotSupported,
 }
