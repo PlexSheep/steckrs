@@ -1,0 +1,70 @@
+name: Rust CI
+on:
+  pull_request:
+    branches:
+      - '**'
+  push:
+    branches:
+      - '**'
+      # - '!master'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run tests
+        run: cargo test --all-features --workspace --all-targets
+
+  clippy:
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the
+      # added or changed files to the repository.
+      contents: write
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy,rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Clippy check and fix
+        run: cargo clippy --fix --all-targets --all-features --workspace
+      - name: Check formatting
+        run: cargo fmt --all
+      - name: commit back to repository
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          # These defaults somehow do not work for me, so I've set them 
+          # explicitly
+          # The big number is the userid of the bot
+          commit_user_name: github-actions[bot]
+          commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
+          commit_author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> # defaults to "username <username@users.noreply.github.com>", where "username" belongs to the author of the commit that triggered the run
+          commit_message: "ci: automatic Rust CI changes"
+
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Check documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps --document-private-items --all-features --workspace --examples
