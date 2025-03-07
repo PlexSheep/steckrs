@@ -1,28 +1,21 @@
+// lib.rs
 use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-/// Result type for plugin operations
-pub type PluginResult<T> = Result<T, PluginError>;
+pub mod error;
+pub mod hook;
 
-/// Error type for plugin operations
-#[derive(Debug, thiserror::Error)]
-pub enum PluginError {
-    #[error("{0} was already loaded")]
-    AlreadyLoaded(String),
+use self::error::PluginResult;
+use self::hook::HookRegistry;
 
-    #[error("Plugin not found: {0}")]
-    NotFound(String),
-
-    #[error("Plugin execution error: {0}")]
-    ExecutionError(anyhow::Error),
-}
+pub type PluginID = &'static str;
 
 /// Plugin trait that must be implemented by plugins
 /// This is typically defined in your main application and re-exported here
 pub trait Plugin: Any + Send + Sync + Debug {
     /// Returns the name of the plugin
-    fn name(&self) -> &str;
+    fn name(&self) -> PluginID;
 
     /// Returns a description of the plugin
     fn description(&self) -> &str;
@@ -53,32 +46,55 @@ pub trait Plugin: Any + Send + Sync + Debug {
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-pub trait PluginHooks: Debug {}
-
 /// Plugin manager that handles plugin loading, execution, and lifecycle
 #[derive(Debug, Default)]
-pub struct PluginManager<PH: PluginHooks> {
-    plugins: HashMap<String, Box<dyn Plugin>>,
-    hooks: PH,
+pub struct PluginManager {
+    plugins: HashMap<PluginID, Box<dyn Plugin>>,
+    hook_registry: HookRegistry,
 }
 
-impl<PH: PluginHooks> PluginManager<PH> {
+impl PluginManager {
     /// Create a new plugin manager
-    pub fn new(hooks: PH) -> Self {
+    pub fn new() -> Self {
         Self {
             plugins: HashMap::new(),
-            hooks,
+            hook_registry: HookRegistry::new(),
         }
+    }
+
+    /// Create a new plugin manager with an existing hook registry
+    pub fn with_registry(hook_registry: HookRegistry) -> Self {
+        Self {
+            plugins: HashMap::new(),
+            hook_registry,
+        }
+    }
+
+    /// Get a reference to the hook registry
+    pub fn hook_registry(&self) -> &HookRegistry {
+        &self.hook_registry
+    }
+
+    /// Get a mutable reference to the hook registry
+    pub fn hook_registry_mut(&mut self) -> &mut HookRegistry {
+        &mut self.hook_registry
     }
 
     /// Register a statically linked plugin
     pub fn load_plugin(&mut self, plugin: Box<dyn Plugin>) -> PluginResult<()> {
-        let name = plugin.name().to_string();
-        if self.plugins.contains_key(&name) {
-            return Err(PluginError::AlreadyLoaded(name));
+        let id = plugin.name();
+        if self.plugins.contains_key(id) {
+            return Err(error::PluginError::AlreadyLoaded(id));
         }
 
-        self.plugins.insert(name, plugin);
+        // Store the plugin
+        self.plugins.insert(id, plugin);
+
+        // Get a mutable reference to the just-stored plugin and call on_load
+        if let Some(plugin) = self.plugins.values_mut().last() {
+            plugin.on_load()?;
+        }
+
         Ok(())
     }
 
@@ -113,7 +129,7 @@ impl<PH: PluginHooks> PluginManager<PH> {
     }
 
     /// Get all plugin names
-    pub fn plugin_names(&self) -> Vec<String> {
+    pub fn plugin_ids(&self) -> Vec<PluginID> {
         self.plugins.keys().cloned().collect()
     }
 
@@ -132,24 +148,24 @@ impl<PH: PluginHooks> PluginManager<PH> {
     }
 
     /// Enable a plugin by name
-    pub fn enable_plugin(&mut self, name: &str) -> PluginResult<()> {
-        match self.plugins.get_mut(name) {
+    pub fn enable_plugin(&mut self, id: PluginID) -> PluginResult<()> {
+        match self.plugins.get_mut(id) {
             Some(plugin) => {
                 plugin.enable();
                 Ok(())
             }
-            None => Err(PluginError::NotFound(name.to_string())),
+            None => Err(error::PluginError::NotFound(id)),
         }
     }
 
     /// Disable a plugin by name
-    pub fn disable_plugin(&mut self, name: &str) -> PluginResult<()> {
-        match self.plugins.get_mut(name) {
+    pub fn disable_plugin(&mut self, id: PluginID) -> PluginResult<()> {
+        match self.plugins.get_mut(id) {
             Some(plugin) => {
                 plugin.disable();
                 Ok(())
             }
-            None => Err(PluginError::NotFound(name.to_string())),
+            None => Err(error::PluginError::NotFound(id)),
         }
     }
 }
