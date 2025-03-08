@@ -9,6 +9,7 @@ pub mod hook;
 use self::error::PluginResult;
 use self::hook::HookRegistry;
 
+/// Plugin identifier type
 pub type PluginID = &'static str;
 
 /// Plugin trait that must be implemented by plugins
@@ -91,44 +92,49 @@ impl PluginManager {
         self.plugins.insert(id, plugin);
 
         // Get a mutable reference to the just-stored plugin and call on_load
-        if let Some(plugin) = self.plugins.values_mut().last() {
+        if let Some(plugin) = self.plugins.get_mut(id) {
+            // Load the plugin
             plugin.on_load()?;
         }
 
         Ok(())
     }
 
-    /// Unload a plugin by name
-    pub fn unload_plugin(&mut self, name: &str) -> PluginResult<()> {
-        if let Some(mut plugin) = self.plugins.remove(name) {
+    /// Unload a plugin by ID
+    pub fn unload_plugin(&mut self, id: PluginID) -> PluginResult<()> {
+        if let Some(mut plugin) = self.plugins.remove(id) {
+            // Call on_unload for cleanup
             plugin.on_unload()?;
+
+            // Remove all hooks registered by this plugin
+            self.hook_registry.deregister_hooks_for_plugin(id);
         }
         Ok(())
     }
 
-    /// Get a reference to a plugin by name
-    pub fn get_plugin(&self, name: &str) -> Option<&dyn Plugin> {
-        self.plugins.get(name).map(|p| p.as_ref())
+    /// Get a reference to a plugin by ID
+    pub fn get_plugin(&self, id: PluginID) -> Option<&dyn Plugin> {
+        self.plugins.get(id).map(|p| p.as_ref())
     }
 
-    /// Get a mutable reference to a plugin by name
-    pub fn get_plugin_mut(&mut self, name: &str) -> Option<&mut dyn Plugin> {
-        self.plugins.get_mut(name).map(|p| p.as_mut())
+    /// Get a mutable reference to a plugin by ID
+    pub fn get_plugin_mut(&mut self, id: PluginID) -> Option<&mut dyn Plugin> {
+        self.plugins.get_mut(id).map(|p| p.as_mut())
     }
 
     /// Get a typed reference to a plugin (with downcasting)
-    pub fn get_plugin_as<T: 'static>(&self, name: &str) -> Option<&T> {
-        self.get_plugin(name)
+    pub fn get_plugin_as<T: 'static>(&self, id: PluginID) -> Option<&T> {
+        self.get_plugin(id)
             .and_then(|p| p.as_any().downcast_ref::<T>())
     }
 
     /// Get a typed mutable reference to a plugin (with downcasting)
-    pub fn get_plugin_as_mut<T: 'static>(&mut self, name: &str) -> Option<&mut T> {
-        self.get_plugin_mut(name)
+    pub fn get_plugin_as_mut<T: 'static>(&mut self, id: PluginID) -> Option<&mut T> {
+        self.get_plugin_mut(id)
             .and_then(|p| p.as_any_mut().downcast_mut::<T>())
     }
 
-    /// Get all plugin names
+    /// Get all plugin IDs
     pub fn plugin_ids(&self) -> Vec<PluginID> {
         self.plugins.keys().cloned().collect()
     }
@@ -147,7 +153,7 @@ impl PluginManager {
             .collect()
     }
 
-    /// Enable a plugin by name
+    /// Enable a plugin by ID
     pub fn enable_plugin(&mut self, id: PluginID) -> PluginResult<()> {
         match self.plugins.get_mut(id) {
             Some(plugin) => {
@@ -158,7 +164,7 @@ impl PluginManager {
         }
     }
 
-    /// Disable a plugin by name
+    /// Disable a plugin by ID
     pub fn disable_plugin(&mut self, id: PluginID) -> PluginResult<()> {
         match self.plugins.get_mut(id) {
             Some(plugin) => {

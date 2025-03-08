@@ -47,7 +47,7 @@ pub struct Hook<E: ExtensionPoint> {
 }
 
 impl HookID {
-    fn new(
+    pub fn new(
         plugin_id: PluginID,
         extension_point_id: ExtensionPointID,
         discriminator: Option<String>,
@@ -76,17 +76,25 @@ impl<E: ExtensionPoint> Hook<E> {
     pub fn execute(&self, input: E::Input) -> E::Output {
         (self.func)(input)
     }
+
+    pub fn eid(&self) -> ExtensionPointID {
+        E::id()
+    }
 }
 
 /// A type-erased hook that can be stored in a HashMap
-struct BoxedHook {
+pub struct BoxedHook {
     /// The actual hook function, type-erased
     hook: Box<dyn Any + Send + Sync>,
+    eid: ExtensionPointID,
 }
 
 impl BoxedHook {
     pub fn downcast<E: ExtensionPoint>(&self) -> Option<&Hook<E>> {
         self.hook.downcast_ref::<Hook<E>>()
+    }
+    pub fn eid(&self) -> ExtensionPointID {
+        self.eid
     }
 }
 
@@ -105,6 +113,7 @@ pub struct HookRegistry {
 impl<E: ExtensionPoint + Send + Sync + 'static> From<Hook<E>> for BoxedHook {
     fn from(value: Hook<E>) -> Self {
         BoxedHook {
+            eid: value.eid(),
             hook: Box::new(value),
         }
     }
@@ -141,9 +150,10 @@ impl HookRegistry {
         Ok(())
     }
 
-    pub fn deregister<E: ExtensionPoint>(&mut self, id: &HookID) -> HookResult<Option<BoxedHook>> {
-        if let Some(h) = self.hooks.get_mut(&E::id()) {
-            Ok(h.remove(id))
+    pub fn deregister(&mut self, id: &HookID) -> Option<BoxedHook> {
+        let hook = self.get_by_id(id)?;
+        if let Some(h) = self.hooks.get_mut(&hook.eid()) {
+            h.remove(id)
         } else {
             todo!()
         }
@@ -160,10 +170,14 @@ impl HookRegistry {
             Some(hooks) => {
                 let boxed_hook = hooks.get(id)?;
                 assert!(id.extension_point_id == E::id());
-                return boxed_hook.downcast();
+                boxed_hook.downcast()
             }
             None => None,
         }
+    }
+
+    pub fn get_by_id(&self, id: &HookID) -> Option<&BoxedHook> {
+        self.get_by_filter(|(hid, _)| *hid == id).first().copied()
     }
 
     pub fn get_by_plugin(&self, plugin_id: PluginID) -> Vec<&BoxedHook> {
@@ -182,10 +196,22 @@ impl HookRegistry {
             .collect()
     }
 
+    pub fn get_by_filter_mut<F>(&mut self, f: F) -> Vec<&mut BoxedHook>
+    where
+        F: FnMut(&(&HookID, &mut BoxedHook)) -> bool,
+    {
+        self.hooks
+            .values_mut()
+            .flatten()
+            .filter(f)
+            .map(|(_id, hook)| hook)
+            .collect()
+    }
+
     pub fn get_by_extension_point<E: ExtensionPoint>(&self) -> Vec<&Hook<E>> {
         let Some(boxed_hooks) = self.hooks.get(&E::id()) else {return Vec::new()};
         boxed_hooks
-            .into_iter()
+            .iter()
             .map(|(_k, v)| v.downcast().expect("could not downcast BoxedHook to Hook"))
             .collect()
     }
@@ -200,6 +226,22 @@ impl HookRegistry {
             Ok(hook.execute(input))
         } else {
             Err(HookError::HookNotFound(E::id()))
+        }
+    }
+
+    pub fn deregister_hooks_for_plugin(&mut self, plugin_id: PluginID) {
+        let to_del: Vec<HookID> = self
+            .hooks
+            .values()
+            .flatten()
+            .filter(|(id, _hook)| id.plugin_id == plugin_id)
+            .map(|(id, _)| id)
+            .map(|a| a.to_owned())
+            .collect();
+
+        for id in to_del {
+            self.deregister(&id)
+                .expect("could not deregister a hook that we know exists");
         }
     }
 }

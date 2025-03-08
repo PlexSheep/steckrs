@@ -23,7 +23,7 @@ pub enum PluginError {
 /// Error type for plugin operations
 #[derive(Debug, thiserror::Error)]
 pub enum HookError {
-    #[error("Hook not found: {0}")]
+    #[error("Hook not found: {0:?}")]
     HookNotFound(ExtensionPointID),
     #[error("Tried to register to a hook that already exists")]
     AlreadyRegistered,
