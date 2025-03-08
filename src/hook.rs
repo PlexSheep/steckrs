@@ -4,24 +4,60 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use crate::error::{HookError, HookResult};
+use crate::PluginID;
 
 /// Hook ID type
-pub type ExtensionPointID = &'static str;
-pub type HookID = &'static str;
-
+pub type ExtensionPointID = std::any::TypeId;
 /// A hook function that can be registered
 pub type HookFunction<I, O> = Box<dyn Fn(I) -> O + Send + Sync>;
 
-pub trait ExtensionPoint {
-    fn id() -> ExtensionPointID;
+/// Hook identifier type - uniquely identifies a specific hook instance
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct HookID {
+    /// Plugin that owns this hook
+    pub plugin_id: PluginID,
+    /// Extension point this hook implements
+    pub extension_point_id: ExtensionPointID,
+    /// Optional discriminator if a plugin registers multiple hooks for same extension point
+    pub discriminator: Option<String>,
+}
+
+/// Extension point trait - defines the interface for a specific hook type
+pub trait ExtensionPoint: 'static {
+    /// Unique identifier for this extension point
+    fn id() -> ExtensionPointID {
+        std::any::TypeId::of::<Self>()
+    }
+    /// Human readable name of this extension point
+    fn name() -> &'static str {
+        std::any::type_name::<Self>()
+    }
+    /// Input type for this extension point
     type Input;
+    /// Output type for this extension point
     type Output;
 }
 
 /// Container for a hook function with proper type information
 pub struct Hook<E: ExtensionPoint> {
+    /// Marker for the extension point type
     extension_point: PhantomData<E>,
+    /// The actual hook function
     func: HookFunction<E::Input, E::Output>,
+}
+
+impl HookID {
+    fn new(
+        plugin_id: PluginID,
+        extension_point_id: ExtensionPointID,
+        discriminator: Option<String>,
+    ) -> Self {
+        HookID {
+            plugin_id,
+            extension_point_id,
+            discriminator,
+        }
+    }
 }
 
 impl<E: ExtensionPoint> Hook<E> {
@@ -46,32 +82,30 @@ impl<E: ExtensionPoint> Hook<E> {
 struct BoxedHook {
     /// The actual hook function, type-erased
     hook: Box<dyn Any + Send + Sync>,
-    /// Type information for downcasting
-    extension_point_type_id: std::any::TypeId,
+}
+
+impl BoxedHook {
+    pub fn downcast<E: ExtensionPoint>(&self) -> Option<&Hook<E>> {
+        self.hook.downcast_ref::<Hook<E>>()
+    }
 }
 
 impl Debug for BoxedHook {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("BoxedHook")
-            .field(
-                "extension_point_type_id",
-                &format!("{:?}", self.extension_point_type_id),
-            )
-            .finish_non_exhaustive()
+        f.debug_struct("BoxedHook").finish_non_exhaustive()
     }
 }
 
 /// Registry for hooks
 #[derive(Debug, Default)]
 pub struct HookRegistry {
-    hooks: HashMap<HookID, Vec<BoxedHook>>,
+    hooks: HashMap<ExtensionPointID, HashMap<HookID, BoxedHook>>,
 }
 
 impl<E: ExtensionPoint + Send + Sync + 'static> From<Hook<E>> for BoxedHook {
     fn from(value: Hook<E>) -> Self {
         BoxedHook {
             hook: Box::new(value),
-            extension_point_type_id: std::any::TypeId::of::<E>(),
         }
     }
 }
@@ -87,47 +121,85 @@ impl HookRegistry {
     /// Register a hook with the given ID
     pub fn register<E: ExtensionPoint + Send + Sync + 'static>(
         &mut self,
-        id: HookID,
+        id: &HookID,
         hook: Hook<E>,
     ) -> HookResult<()> {
+        if self.exists::<E>(id) {
+            return Err(HookError::AlreadyRegistered);
+        }
+
         let boxed_hook = BoxedHook::from(hook);
 
-        self.hooks.entry(id).or_default().push(boxed_hook);
+        let old = self
+            .hooks
+            .entry(E::id())
+            .or_default()
+            .insert(id.clone(), boxed_hook);
+
+        assert!(old.is_none());
 
         Ok(())
     }
 
-    /// Deregister all hooks with the given ID
-    pub fn deregister(&mut self, id: ExtensionPointID) -> HookResult<()> {
-        self.hooks.remove(id);
-        Ok(())
+    pub fn deregister<E: ExtensionPoint>(&mut self, id: &HookID) -> HookResult<Option<BoxedHook>> {
+        if let Some(h) = self.hooks.get_mut(&E::id()) {
+            Ok(h.remove(id))
+        } else {
+            todo!()
+        }
     }
 
-    /// Get all hooks with the given ID and types
-    pub fn get<E: ExtensionPoint + 'static>(&self, id: HookID) -> Option<&Hook<E>> {
-        match self.hooks.get(id) {
+    #[must_use]
+    pub fn exists<E: ExtensionPoint>(&self, id: &HookID) -> bool {
+        self.get::<E>(id).is_some()
+    }
+
+    /// Get the hooks with the given ID
+    pub fn get<E: ExtensionPoint>(&self, id: &HookID) -> Option<&Hook<E>> {
+        match self.hooks.get(&E::id()) {
             Some(hooks) => {
-                for h in hooks {
-                    if h.extension_point_type_id == std::any::TypeId::of::<E>() {
-                        return h.hook.downcast_ref::<Hook<E>>();
-                    }
-                }
-                None
+                let boxed_hook = hooks.get(id)?;
+                assert!(id.extension_point_id == E::id());
+                return boxed_hook.downcast();
             }
             None => None,
         }
     }
 
-    /// Execute all hooks with the given ID and types
-    pub fn execute<E: ExtensionPoint + 'static>(
+    pub fn get_by_plugin(&self, plugin_id: PluginID) -> Vec<&BoxedHook> {
+        self.get_by_filter(|(id, _)| id.plugin_id == plugin_id)
+    }
+
+    pub fn get_by_filter<F>(&self, f: F) -> Vec<&BoxedHook>
+    where
+        F: FnMut(&(&HookID, &BoxedHook)) -> bool,
+    {
+        self.hooks
+            .values()
+            .flatten()
+            .filter(f)
+            .map(|(_id, hook)| hook)
+            .collect()
+    }
+
+    pub fn get_by_extension_point<E: ExtensionPoint>(&self) -> Vec<&Hook<E>> {
+        let Some(boxed_hooks) = self.hooks.get(&E::id()) else {return Vec::new()};
+        boxed_hooks
+            .into_iter()
+            .map(|(_k, v)| v.downcast().expect("could not downcast BoxedHook to Hook"))
+            .collect()
+    }
+
+    /// Execute the hooks with the given ID
+    pub fn execute<E: ExtensionPoint>(
         &self,
-        id: HookID,
+        id: &HookID,
         input: E::Input,
     ) -> HookResult<E::Output> {
         if let Some(hook) = self.get::<E>(id) {
             Ok(hook.execute(input))
         } else {
-            Err(HookError::HookNotFound(id))
+            Err(HookError::HookNotFound(E::id()))
         }
     }
 }

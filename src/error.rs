@@ -25,4 +25,6 @@ pub enum PluginError {
 pub enum HookError {
     #[error("Hook not found: {0}")]
     HookNotFound(ExtensionPointID),
+    #[error("Tried to register to a hook that already exists")]
+    AlreadyRegistered,
 }
