@@ -3,33 +3,35 @@ use std::fmt::Debug;
 
 use steckrs::{
     error::PluginResult,
+    extension_point,
     hook::{ExtensionPoint, Hook, HookID},
     Plugin, PluginID, PluginManager,
 };
 
-// Define a trait for text filtering
-pub trait TextFilterTrait: Send + Sync {
-    fn filter(&self, text: &str) -> String;
-}
-
-// Define our extension point for text filtering
-pub struct TextFilter;
-impl ExtensionPoint for TextFilter {
-    type HookTrait = dyn TextFilterTrait;
-}
+extension_point!(TextFilter: TextFilterFunctions,
+    fn filter(&self, text: &str) -> String,
+    fn tester(&self, num: usize) -> String,
+);
 
 // Define implementations of the text filter trait
 struct UppercaseFilter;
-impl TextFilterTrait for UppercaseFilter {
+impl TextFilterFunctions for UppercaseFilter {
     fn filter(&self, text: &str) -> String {
         text.to_uppercase()
+    }
+
+    fn tester(&self, num: usize) -> String {
+        format!("{num}")
     }
 }
 
 struct ReverseFilter;
-impl TextFilterTrait for ReverseFilter {
+impl TextFilterFunctions for ReverseFilter {
     fn filter(&self, text: &str) -> String {
         text.chars().rev().collect()
+    }
+    fn tester(&self, num: usize) -> String {
+        format!("{}", num * 2)
     }
 }
 
