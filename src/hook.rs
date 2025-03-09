@@ -52,18 +52,18 @@ pub trait ExtensionPoint: 'static {
 /// A wrapper around a hook trait object
 pub struct Hook<E: ExtensionPoint> {
     /// The actual hook trait object
-    hook: Box<E::HookTrait>,
+    inner: Box<E::HookTrait>,
 }
 
 impl<E: ExtensionPoint> Hook<E> {
     /// Create a new hook with the given trait implementation
     pub fn new(hook: Box<E::HookTrait>) -> Self {
-        Hook { hook }
+        Hook { inner: hook }
     }
 
-    /// Access the hook trait implementation
-    pub fn hook(&self) -> &E::HookTrait {
-        &self.hook
+    /// Access the inner trait implementation
+    pub fn inner(&self) -> &E::HookTrait {
+        &self.inner
     }
 }
 
