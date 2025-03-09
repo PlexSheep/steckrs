@@ -1,4 +1,118 @@
-// lib.rs
+//! # steckrs
+//!
+//! A lightweight, trait-based plugin system for Rust applications and libraries.
+//!
+//! ## What is steckrs?
+//!
+//! "steckrs" is a wordplay combining the German word "Stecker" (meaning "plug" or "connector") and
+//! the Rust file extension (.rs). The library provides a flexible, type-safe plugin architecture
+//! for Rust applications, allowing developers to:
+//!
+//! - Define extension points in their applications
+//! - Create plugins that integrate with these extension points
+//! - Dynamically manage plugins (loading, enabling, disabling, unloading)
+//! - Register and invoke hooks with proper type safety
+//!
+//! ## Core Concepts
+//!
+//! ### Extension Points
+//!
+//! [Extension points](crate::hook::ExtensionPoint) define interfaces where plugins can add functionality. Each extension point:
+//! - Is defined as a trait that plugins implement
+//! - Specifies the contract that plugins must fulfill
+//! - Provides type-safe interaction between the core application and plugins
+//!
+//! ### Plugins
+//!
+//! [Plugins](Plugin) are self-contained modules that implement functionality for extension points.
+//! Each plugin:
+//! - Has a unique identifier
+//! - Can be enabled or disabled at runtime
+//! - Can register multiple hooks to different extension points
+//! - Has lifecycle methods ([`on_load`](Plugin::on_load), [`on_unload`](Plugin::on_unload))
+//!
+//! ### Hooks
+//!
+//! [Hooks](crate::hook::Hook) are implementations of extension points that plugins register. They:
+//! - Implement the trait defined by an extension point
+//! - Are invoked when the application calls that extension point
+//! - Can be uniquely identified by their plugin ID, extension point, and optional discriminator
+//!
+//! ## Logs
+//!
+//! This library logs certain events with the [`tracing`] library.
+//!
+//! ## Usage Example
+//!
+//! Here's a simple example of how to use steckrs to create a plugin-enabled application:
+//!
+//! ```rust
+//! use steckrs::{extension_point, simple_plugin, PluginManager};
+//!
+//! // Define an extension point
+//! extension_point!(
+//!     GreeterExtension: GreeterTrait,
+//!     fn greet(&self, name: &str) -> String,
+//! );
+//!
+//! // Create a plugin
+//! simple_plugin!(
+//!     HelloPlugin,
+//!     "hello_plugin",
+//!     "A simple greeting plugin",
+//!     hooks: [(GreeterExtension, EnglishGreeter)]
+//! );
+//!
+//! // Implement a hook
+//! struct EnglishGreeter;
+//! impl GreeterTrait for EnglishGreeter {
+//!     fn greet(&self, name: &str) -> String {
+//!         format!("Hello, {}!", name)
+//!     }
+//! }
+//!
+//! // Create plugin manager
+//! let mut plugin_manager = PluginManager::new();
+//!
+//! // Load and enable the plugin
+//! plugin_manager.load_plugin(Box::new(HelloPlugin::new())).unwrap();
+//! plugin_manager.enable_plugin(HelloPlugin::ID).unwrap();
+//!
+//! // Use the plugin
+//! let registry = plugin_manager.hook_registry();
+//! let hooks = registry.get_by_extension_point::<GreeterExtension>();
+//!
+//! // execute all hooks relevant for this extension point
+//! for hook in hooks {
+//!     println!("{}", hook.inner().greet("World"));
+//! }
+//! ```
+//!
+//! ## Macros
+//!
+//! steckrs provides several convenience macros to reduce boilerplate:
+//!
+//! - [`extension_point!`] - Defines an extension point and its associated trait
+//! - [`simple_plugin!`] - Creates a simple plugin with minimal boilerplate
+//! - [`register_hook!`] - Registers a hook with the hook registry
+//!
+//! Note that [`register_hook!`] is not needed if you generate your plugin with [`simple_plugin!`].
+//!
+//! ## Advanced Usage
+//!
+//! For more complex scenarios, you can implement the [`Plugin`] trait directly,
+//! allowing for more customized plugin behavior and state management.
+
+#![warn(missing_docs)]
+#![warn(clippy::missing_errors_doc)]
+#![warn(clippy::missing_panics_doc)]
+#![warn(clippy::missing_safety_doc)]
+#![warn(clippy::panic)]
+#![warn(clippy::todo)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::all)]
+#![warn(clippy::empty_docs)]
+
 use std::any::Any;
 use std::collections::HashMap;
 use std::error::Error;
@@ -10,44 +124,189 @@ pub mod macros;
 
 use tracing::{error, warn};
 
-use self::error::PluginResult;
+use self::error::{PluginError, PluginResult};
 use self::hook::HookRegistry;
 
-/// Plugin identifier type
+/// Plugin identifier type.
+///
+/// Every plugin must have a unique identifier.
 pub type PluginID = &'static str;
 
-/// Plugin trait that must be implemented by plugins
-/// This is typically defined in your main application and re-exported here
+/// Plugin trait that must be implemented by all plugins.
+///
+/// This trait defines the interface for plugin lifecycle management,
+/// including loading, enabling, disabling, and unloading operations.
+///
+/// # Macros
+///
+/// Most users will find the [`simple_plugin!`] macro sufficient.
+///
+///
+/// ```
+/// # use steckrs::{extension_point, simple_plugin, PluginManager};
+/// # extension_point!(
+/// #     GreeterExtension: GreeterTrait,
+/// #     fn greet(&self, name: &str) -> String,
+/// # );
+/// #
+/// # struct EnglishGreeter;
+/// # impl GreeterTrait for EnglishGreeter {
+/// #     fn greet(&self, name: &str) -> String {
+/// #         format!("Hello, {}!", name)
+/// #     }
+/// # }
+/// #
+/// simple_plugin!(
+///     HelloPlugin,
+///     "hello_plugin",
+///     "A simple greeting plugin",
+///     hooks: [(GreeterExtension, EnglishGreeter)]
+/// );
+/// ```
+///
+/// # Examples
+///
+/// ```
+/// use steckrs::{Plugin, error::PluginResult, hook::HookRegistry};
+///
+/// #[derive(Debug)]
+/// struct MyPlugin {
+///     enabled: bool,
+/// }
+///
+/// impl Plugin for MyPlugin {
+///     fn id(&self) -> steckrs::PluginID {
+///         // recommendation: add an associated constant for the ID
+///         "my_plugin"
+///     }
+///
+///     fn description(&self) -> &str {
+///         // recommendation: add an associated constant for the DESCRIPTION
+///         "A custom plugin implementation"
+///     }
+///
+///     fn is_enabled(&self) -> bool {
+///         self.enabled
+///     }
+///
+///     fn enable(&mut self) {
+///         self.enabled = true;
+///     }
+///
+///     fn disable(&mut self) {
+///         self.enabled = false;
+///     }
+///
+///     fn register_hooks(&self, registry: &mut HookRegistry) -> PluginResult<()> {
+///         // Register hooks here
+///         Ok(())
+///     }
+///
+///     // optionally define on_load and on_unload
+/// }
+/// ```
 pub trait Plugin: Any + Send + Sync + Debug {
-    /// Returns the name of the plugin
+    /// Returns the unique identifier for this plugin.
+    ///
+    /// The ID must be unique across all loaded plugins.
     fn id(&self) -> PluginID;
 
-    /// Returns a description of the plugin
+    /// Returns a human-readable description of the plugin.
     fn description(&self) -> &str;
 
-    /// Returns whether the plugin is enabled
+    /// Returns whether the plugin is currently enabled.
     fn is_enabled(&self) -> bool;
 
-    /// Enables the plugin
+    /// Enables the plugin, allowing its hooks to be used.
     fn enable(&mut self);
 
-    /// Disables the plugin
+    /// Disables the plugin, preventing its hooks from being used.
     fn disable(&mut self);
 
-    /// Called while the plugin is being loaded and used to register [Hooks](crate::hook::Hook)
+    /// Registers this plugin's [Hooks](crate::hook::Hook) with the [`HookRegistry`].
+    ///
+    /// This method is called during plugin loading, and should register
+    /// all hooks that the plugin provides.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `PluginError` if hook registration fails./
     fn register_hooks(&self, registry: &mut HookRegistry) -> PluginResult<()>;
-    /// Called when the plugin is loaded
+
+    /// Called when the plugin is loaded.
+    ///
+    /// Provides an opportunity to perform initialization that should happen
+    /// when the plugin is first loaded, before hooks are used.
+    ///
+    /// This function is always called after [`register_hooks`](Plugin::register_hooks).
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`PluginError`](error::PluginError) if loading fails.
     fn on_load(&mut self) -> PluginResult<()> {
         Ok(())
     }
 
-    /// Called when the plugin is unloaded
+    /// Called when the plugin is unloaded.
+    ///
+    /// Provides an opportunity to perform cleanup before the plugin is removed.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`PluginError`](error::PluginError) if the unloading cleanup fails.
     fn on_unload(&mut self) -> PluginResult<()> {
         Ok(())
     }
 }
 
-/// Plugin manager that handles plugin loading, execution, and lifecycle
+/// Manages plugin loading, execution, and lifecycle.
+///
+/// The [`PluginManager`] is the core component of the steckrs plugin system,
+/// responsible for:
+/// - Loading and unloading plugins
+/// - Enabling and disabling plugins
+/// - Maintaining the hook registry
+/// - Tracking loaded plugins
+///
+/// # Examples
+///
+/// ```
+/// use steckrs::{PluginManager, simple_plugin, extension_point};
+///
+/// // Define extension point
+/// extension_point!(
+///     ExampleExt: ExampleTrait,
+///     fn do_something(&self) -> &'static str,
+/// );
+///
+/// // Define plugin
+/// simple_plugin!(
+///     ExamplePlugin,
+///     "example_plugin",
+///     "An example plugin",
+///     hooks: [(ExampleExt, ExampleHook)]
+/// );
+///
+/// // Hook implementation
+/// struct ExampleHook;
+/// impl ExampleTrait for ExampleHook {
+///     fn do_something(&self) -> &'static str {
+///         "I did something!"
+///     }
+/// }
+///
+/// // Plugin management
+/// let mut manager = PluginManager::new();
+/// manager.load_plugin(Box::new(ExamplePlugin::new())).unwrap();
+/// manager.enable_plugin(ExamplePlugin::ID).unwrap();
+///
+/// // Use plugin hooks
+/// let registry = manager.hook_registry();
+/// let hooks = registry.get_by_extension_point::<ExampleExt>();
+/// for hook in hooks {
+///     assert_eq!(hook.inner().do_something(), "I did something!");
+/// }
+/// ```
 #[derive(Debug, Default)]
 pub struct PluginManager {
     plugins: HashMap<PluginID, Box<dyn Plugin>>,
@@ -55,7 +314,17 @@ pub struct PluginManager {
 }
 
 impl PluginManager {
-    /// Create a new plugin manager
+    /// Creates a new empty plugin manager.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::PluginManager;
+    ///
+    /// let manager = PluginManager::new();
+    /// assert_eq!(manager.plugin_ids().len(), 0);
+    /// ```
+    #[must_use]
     pub fn new() -> Self {
         Self {
             plugins: HashMap::new(),
@@ -63,7 +332,20 @@ impl PluginManager {
         }
     }
 
-    /// Create a new plugin manager with an existing hook registry
+    /// Creates a new plugin manager with an existing hook registry.
+    ///
+    /// This allows sharing a hook registry between multiple plugin managers,
+    /// which can be useful for complex applications.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::{PluginManager, hook::HookRegistry};
+    ///
+    /// let registry = HookRegistry::new();
+    /// let manager = PluginManager::with_registry(registry);
+    /// ```
+    #[must_use]
     pub fn with_registry(hook_registry: HookRegistry) -> Self {
         Self {
             plugins: HashMap::new(),
@@ -71,17 +353,60 @@ impl PluginManager {
         }
     }
 
-    /// Get a reference to the hook registry
+    /// Returns a reference to the hook registry.
+    ///
+    /// The hook registry contains all registered hooks from loaded plugins.
+    #[must_use]
     pub fn hook_registry(&self) -> &HookRegistry {
         &self.hook_registry
     }
 
-    /// Get a mutable reference to the hook registry
+    /// Returns a mutable reference to the hook registry.
+    ///
+    /// This can be used to directly manipulate the hook registry if needed.
+    #[must_use]
     pub fn hook_registry_mut(&mut self) -> &mut HookRegistry {
         &mut self.hook_registry
     }
 
-    /// Register a statically linked plugin
+    /// Loads a plugin into the plugin manager.
+    ///
+    /// This will:
+    /// 1. Register the plugin's hooks in the hook registry
+    /// 2. Call the plugin's `on_load` method
+    /// 3. Store the plugin in the manager
+    ///
+    /// # Errors
+    ///
+    /// Returns a `PluginError` if:
+    /// - A plugin with the same ID is already loaded
+    /// - The plugin's [`on_load`](Plugin::register_hooks) method fails
+    /// - The plugin's [`on_load`](Plugin::on_load) method fails
+    ///
+    /// If any of the steps fail, this function will try to unload the half-loaded plugin again,
+    /// using [`unload_plugin`](Self::unload_plugin).
+    ///
+    /// # Panics
+    ///
+    /// If loading of the plugin and then unloading the half-loaded plugin both fail, this function
+    /// will panic.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::{PluginManager, simple_plugin};
+    ///
+    /// simple_plugin!(
+    ///     ExamplePlugin,
+    ///     "example_plugin",
+    ///     "An example plugin",
+    ///     hooks: []
+    /// );
+    ///
+    /// let mut manager = PluginManager::new();
+    /// manager.load_plugin(Box::new(ExamplePlugin::new())).unwrap();
+    /// assert!(manager.get_plugin("example_plugin").is_some());
+    /// ```
     pub fn load_plugin(&mut self, mut plugin: Box<dyn Plugin>) -> PluginResult<()> {
         let id = plugin.id();
         if self.plugins.contains_key(id) {
@@ -90,11 +415,13 @@ impl PluginManager {
 
         // register the hooks
         if let Err(e) = plugin.register_hooks(self.hook_registry_mut()) {
-            self.handle_error_during_load(e, id);
+            self.handle_error_during_load(&e, id);
+            return Err(e);
         }
         // Load the plugin
         if let Err(e) = plugin.on_load() {
-            self.handle_error_during_load(e, id);
+            self.handle_error_during_load(&e, id);
+            return Err(e);
         }
 
         // Store the plugin
@@ -103,14 +430,46 @@ impl PluginManager {
         Ok(())
     }
 
-    fn handle_error_during_load(&mut self, e: impl Error, plugin_id: PluginID) {
+    /// Internal helper to handle errors during plugin loading.
+    ///
+    /// If a plugin fails during loading, this will attempt to clean up
+    /// by unloading the plugin.
+    fn handle_error_during_load(&mut self, e: &PluginError, plugin_id: PluginID) {
         error!("Could not register hooks of plugin {plugin_id}: {e}");
         warn!("Trying to unload the plugin again... Will crash if this fails");
         self.unload_plugin(plugin_id)
             .expect("Could not unload bad plugin again");
     }
 
-    /// Unload a plugin by ID
+    /// Unloads a plugin by ID.
+    ///
+    /// This will:
+    /// 1. Call the plugin's `on_unload` method for cleanup
+    /// 2. Remove all hooks registered by the plugin
+    /// 3. Remove the plugin from the manager
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`PluginError`] if:
+    /// - The plugin's [`on_unload`](Plugin::on_unload) method fails
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::{PluginManager, simple_plugin};
+    ///
+    /// simple_plugin!(
+    ///     ExamplePlugin,
+    ///     "example_plugin",
+    ///     "An example plugin",
+    ///     hooks: []
+    /// );
+    ///
+    /// let mut manager = PluginManager::new();
+    /// manager.load_plugin(Box::new(ExamplePlugin::new())).unwrap();
+    /// manager.unload_plugin("example_plugin").unwrap();
+    /// assert!(manager.get_plugin("example_plugin").is_none());
+    /// ```
     pub fn unload_plugin(&mut self, id: PluginID) -> PluginResult<()> {
         if let Some(mut plugin) = self.plugins.remove(id) {
             // Call on_unload for cleanup
@@ -122,27 +481,151 @@ impl PluginManager {
         Ok(())
     }
 
-    /// Get a reference to a plugin by ID
+    /// Gets a reference to a plugin by ID.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::{PluginManager, simple_plugin};
+    ///
+    /// simple_plugin!(
+    ///     ExamplePlugin,
+    ///     "example_plugin",
+    ///     "An example plugin",
+    ///     hooks: []
+    /// );
+    ///
+    /// let mut manager = PluginManager::new();
+    /// manager.load_plugin(Box::new(ExamplePlugin::new())).unwrap();
+    ///
+    /// let plugin = manager.get_plugin("example_plugin");
+    /// assert!(plugin.is_some());
+    /// assert_eq!(plugin.unwrap().id(), "example_plugin");
+    /// ```
+    #[must_use]
     pub fn get_plugin(&self, id: PluginID) -> Option<&dyn Plugin> {
-        self.plugins.get(id).map(|p| p.as_ref())
+        self.plugins.get(id).map(std::convert::AsRef::as_ref)
     }
 
-    /// Get a mutable reference to a plugin by ID
+    /// Gets a mutable reference to a plugin by ID.
+    ///
+    /// This can be used to modify a plugin's state after it's been loaded.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::{PluginManager, simple_plugin};
+    ///
+    /// simple_plugin!(
+    ///     ExamplePlugin,
+    ///     "example_plugin",
+    ///     "An example plugin",
+    ///     hooks: []
+    /// );
+    ///
+    /// let mut manager = PluginManager::new();
+    /// manager.load_plugin(Box::new(ExamplePlugin::new())).unwrap();
+    ///
+    /// let plugin = manager.get_plugin_mut("example_plugin");
+    /// assert!(plugin.is_some());
+    /// ```
+    #[must_use]
     pub fn get_plugin_mut(&mut self, id: PluginID) -> Option<&mut dyn Plugin> {
-        self.plugins.get_mut(id).map(|p| p.as_mut())
+        self.plugins.get_mut(id).map(std::convert::AsMut::as_mut)
     }
 
-    /// Get all plugin IDs
+    /// Gets all plugin IDs.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::{PluginManager, simple_plugin};
+    ///
+    /// simple_plugin!(
+    ///     Plugin1,
+    ///     "plugin1",
+    ///     "First plugin",
+    ///     hooks: []
+    /// );
+    ///
+    /// simple_plugin!(
+    ///     Plugin2,
+    ///     "plugin2",
+    ///     "Second plugin",
+    ///     hooks: []
+    /// );
+    ///
+    /// let mut manager = PluginManager::new();
+    /// manager.load_plugin(Box::new(Plugin1::new())).unwrap();
+    /// manager.load_plugin(Box::new(Plugin2::new())).unwrap();
+    ///
+    /// let ids = manager.plugin_ids();
+    /// assert_eq!(ids.len(), 2);
+    /// assert!(ids.contains(&"plugin1"));
+    /// assert!(ids.contains(&"plugin2"));
+    /// ```
+    #[must_use]
     pub fn plugin_ids(&self) -> Vec<PluginID> {
         self.plugins.keys().cloned().collect()
     }
 
-    /// Get all plugins
+    /// Gets all plugins.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::{PluginManager, simple_plugin};
+    ///
+    /// simple_plugin!(
+    ///     Plugin1,
+    ///     "plugin1",
+    ///     "First plugin",
+    ///     hooks: []
+    /// );
+    ///
+    /// let mut manager = PluginManager::new();
+    /// manager.load_plugin(Box::new(Plugin1::new())).unwrap();
+    ///
+    /// let plugins = manager.plugins();
+    /// assert_eq!(plugins.len(), 1);
+    /// assert_eq!(plugins[0].id(), "plugin1");
+    /// ```
+    #[must_use]
     pub fn plugins(&self) -> Vec<&dyn Plugin> {
         self.plugins.values().map(|p| p.as_ref()).collect()
     }
 
-    /// Get all enabled plugins
+    /// Gets all enabled plugins.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::{PluginManager, simple_plugin};
+    ///
+    /// simple_plugin!(
+    ///     Plugin1,
+    ///     "plugin1",
+    ///     "First plugin",
+    ///     hooks: []
+    /// );
+    ///
+    /// simple_plugin!(
+    ///     Plugin2,
+    ///     "plugin2",
+    ///     "Second plugin",
+    ///     hooks: []
+    /// );
+    ///
+    /// let mut manager = PluginManager::new();
+    /// manager.load_plugin(Box::new(Plugin1::new())).unwrap();
+    /// manager.load_plugin(Box::new(Plugin2::new())).unwrap();
+    /// manager.enable_plugin("plugin1").unwrap();
+    ///
+    /// let enabled = manager.enabled_plugins();
+    /// assert_eq!(enabled.len(), 1);
+    /// assert_eq!(enabled[0].id(), "plugin1");
+    /// ```
+    #[must_use]
     pub fn enabled_plugins(&self) -> Vec<&dyn Plugin> {
         self.plugins
             .values()
@@ -151,7 +634,33 @@ impl PluginManager {
             .collect()
     }
 
-    /// Enable a plugin by ID
+    /// Enables a plugin by ID.
+    ///
+    /// Note that plugins are disabled by default
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`PluginError::NotFound`] if no plugin with the given ID is loaded.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::{PluginManager, simple_plugin};
+    ///
+    /// simple_plugin!(
+    ///     ExamplePlugin,
+    ///     "example_plugin",
+    ///     "An example plugin",
+    ///     hooks: []
+    /// );
+    ///
+    /// let mut manager = PluginManager::new();
+    /// manager.load_plugin(Box::new(ExamplePlugin::new())).unwrap();
+    /// manager.enable_plugin("example_plugin").unwrap();
+    ///
+    /// let plugin = manager.get_plugin("example_plugin").unwrap();
+    /// assert!(plugin.is_enabled());
+    /// ```
     pub fn enable_plugin(&mut self, id: PluginID) -> PluginResult<()> {
         match self.plugins.get_mut(id) {
             Some(plugin) => {
@@ -162,7 +671,32 @@ impl PluginManager {
         }
     }
 
-    /// Disable a plugin by ID
+    /// Disables a plugin by ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`PluginError::NotFound`] if no plugin with the given ID is loaded.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::{PluginManager, simple_plugin};
+    ///
+    /// simple_plugin!(
+    ///     ExamplePlugin,
+    ///     "example_plugin",
+    ///     "An example plugin",
+    ///     hooks: []
+    /// );
+    ///
+    /// let mut manager = PluginManager::new();
+    /// manager.load_plugin(Box::new(ExamplePlugin::new())).unwrap();
+    /// manager.enable_plugin("example_plugin").unwrap();
+    /// manager.disable_plugin("example_plugin").unwrap();
+    ///
+    /// let plugin = manager.get_plugin("example_plugin").unwrap();
+    /// assert!(!plugin.is_enabled());
+    /// ```
     pub fn disable_plugin(&mut self, id: PluginID) -> PluginResult<()> {
         match self.plugins.get_mut(id) {
             Some(plugin) => {
