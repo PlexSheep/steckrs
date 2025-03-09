@@ -115,7 +115,6 @@
 
 use std::any::Any;
 use std::collections::HashMap;
-use std::error::Error;
 use std::fmt::Debug;
 
 pub mod error;
@@ -566,7 +565,7 @@ impl PluginManager {
     /// ```
     #[must_use]
     pub fn plugin_ids(&self) -> Vec<PluginID> {
-        self.plugins.keys().cloned().collect()
+        self.plugins.keys().copied().collect()
     }
 
     /// Gets all plugins.
@@ -592,7 +591,10 @@ impl PluginManager {
     /// ```
     #[must_use]
     pub fn plugins(&self) -> Vec<&dyn Plugin> {
-        self.plugins.values().map(|p| p.as_ref()).collect()
+        self.plugins
+            .values()
+            .map(std::convert::AsRef::as_ref)
+            .collect()
     }
 
     /// Gets all enabled plugins.
@@ -630,7 +632,7 @@ impl PluginManager {
         self.plugins
             .values()
             .filter(|p| p.is_enabled())
-            .map(|p| p.as_ref())
+            .map(std::convert::AsRef::as_ref)
             .collect()
     }
 
