@@ -1,15 +1,12 @@
 use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::marker::PhantomData;
 
 use crate::error::{HookError, HookResult};
 use crate::PluginID;
 
 /// Hook ID type
 pub type ExtensionPointID = std::any::TypeId;
-/// A hook function that can be registered
-pub type HookFunction<I, O> = Box<dyn Fn(I) -> O + Send + Sync>;
 
 /// Hook identifier type - uniquely identifies a specific hook instance
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -20,60 +17,6 @@ pub struct HookID {
     pub extension_point_id: ExtensionPointID,
     /// Optional discriminator if a plugin registers multiple hooks for same extension point
     pub discriminator: Option<String>,
-}
-
-// A wrapper for references that lets us control lifetimes
-#[derive(Copy, Clone)]
-pub struct RefAny<T: ?Sized> {
-    // Raw pointer to data
-    ptr: *const T,
-    // Phantom data to tie the type
-    _marker: PhantomData<T>,
-}
-
-// Safe implementations for RefAny
-impl<T: ?Sized> RefAny<T> {
-    // Create a new wrapper from a reference (can be used with any lifetime)
-    pub fn new<'a>(reference: &'a T) -> Self {
-        RefAny {
-            ptr: reference as *const T,
-            _marker: PhantomData,
-        }
-    }
-
-    // Get a reference with the desired lifetime
-    // Safety: The caller must ensure the original data lives at least as long as 'a
-    pub unsafe fn get<'a>(&self) -> &'a T {
-        &*self.ptr
-    }
-}
-
-// Make RefAny safe to send and sync
-unsafe impl<T: ?Sized + Sync> Send for RefAny<T> {}
-unsafe impl<T: ?Sized + Sync> Sync for RefAny<T> {}
-
-/// Extension point trait - defines the interface for a specific hook type
-pub trait ExtensionPoint: 'static {
-    /// Unique identifier for this extension point
-    fn id() -> ExtensionPointID {
-        std::any::TypeId::of::<Self>()
-    }
-    /// Human readable name of this extension point
-    fn name() -> &'static str {
-        std::any::type_name::<Self>()
-    }
-    /// Input type for this extension point
-    type Input;
-    /// Output type for this extension point
-    type Output;
-}
-
-/// Container for a hook function with proper type information
-pub struct Hook<E: ExtensionPoint> {
-    /// Marker for the extension point type
-    extension_point: PhantomData<E>,
-    /// The actual hook function
-    func: HookFunction<E::Input, E::Output>,
 }
 
 impl HookID {
@@ -90,39 +33,59 @@ impl HookID {
     }
 }
 
+/// Extension point trait - defines the interface for a specific hook type
+pub trait ExtensionPoint: 'static {
+    /// The trait that hooks implement for this extension point
+    type HookTrait: ?Sized + Send + Sync + 'static;
+
+    /// Unique identifier for this extension point
+    fn id() -> ExtensionPointID {
+        std::any::TypeId::of::<Self>()
+    }
+
+    /// Human readable name of this extension point
+    fn name() -> &'static str {
+        std::any::type_name::<Self>()
+    }
+}
+
+/// A wrapper around a hook trait object
+pub struct Hook<E: ExtensionPoint> {
+    /// The actual hook trait object
+    hook: Box<E::HookTrait>,
+}
+
 impl<E: ExtensionPoint> Hook<E> {
-    /// Create a new hook with the given function
-    pub fn new<F>(func: F) -> Self
-    where
-        F: Fn(E::Input) -> E::Output + Send + Sync + 'static,
-    {
-        Hook {
-            extension_point: PhantomData,
-            func: Box::new(func),
-        }
+    /// Create a new hook with the given trait implementation
+    pub fn new(hook: Box<E::HookTrait>) -> Self {
+        Hook { hook }
     }
 
-    /// Execute the hook with the given input
-    pub fn execute(&self, input: E::Input) -> E::Output {
-        (self.func)(input)
-    }
-
-    pub fn eid(&self) -> ExtensionPointID {
-        E::id()
+    /// Access the hook trait implementation
+    pub fn hook(&self) -> &E::HookTrait {
+        &self.hook
     }
 }
 
 /// A type-erased hook that can be stored in a HashMap
 pub struct BoxedHook {
-    /// The actual hook function, type-erased
+    /// The actual hook trait object, type-erased
     hook: Box<dyn Any + Send + Sync>,
     eid: ExtensionPointID,
 }
 
 impl BoxedHook {
+    pub fn new<E: ExtensionPoint>(hook: Hook<E>) -> Self {
+        BoxedHook {
+            hook: Box::new(hook),
+            eid: E::id(),
+        }
+    }
+
     pub fn downcast<E: ExtensionPoint>(&self) -> Option<&Hook<E>> {
         self.hook.downcast_ref::<Hook<E>>()
     }
+
     pub fn eid(&self) -> ExtensionPointID {
         self.eid
     }
@@ -140,15 +103,6 @@ pub struct HookRegistry {
     hooks: HashMap<ExtensionPointID, HashMap<HookID, BoxedHook>>,
 }
 
-impl<E: ExtensionPoint + Send + Sync + 'static> From<Hook<E>> for BoxedHook {
-    fn from(value: Hook<E>) -> Self {
-        BoxedHook {
-            eid: value.eid(),
-            hook: Box::new(value),
-        }
-    }
-}
-
 impl HookRegistry {
     /// Create a new hook registry
     pub fn new() -> Self {
@@ -158,16 +112,12 @@ impl HookRegistry {
     }
 
     /// Register a hook with the given ID
-    pub fn register<E: ExtensionPoint + Send + Sync + 'static>(
-        &mut self,
-        id: &HookID,
-        hook: Hook<E>,
-    ) -> HookResult<()> {
+    pub fn register<E: ExtensionPoint>(&mut self, id: &HookID, hook: Hook<E>) -> HookResult<()> {
         if self.exists::<E>(id) {
             return Err(HookError::AlreadyRegistered);
         }
 
-        let boxed_hook = BoxedHook::from(hook);
+        let boxed_hook = BoxedHook::new(hook);
 
         let old = self
             .hooks
@@ -244,19 +194,6 @@ impl HookRegistry {
             .iter()
             .filter_map(|(_k, v)| v.downcast())
             .collect()
-    }
-
-    /// Execute the hooks with the given ID
-    pub fn execute<E: ExtensionPoint>(
-        &self,
-        id: &HookID,
-        input: E::Input,
-    ) -> HookResult<E::Output> {
-        if let Some(hook) = self.get::<E>(id) {
-            Ok(hook.execute(input))
-        } else {
-            Err(HookError::HookNotFound(E::id()))
-        }
     }
 
     pub fn deregister_hooks_for_plugin(&mut self, plugin_id: PluginID) {

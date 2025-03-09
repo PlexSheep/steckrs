@@ -3,15 +3,34 @@ use std::fmt::Debug;
 
 use steckrs::{
     error::PluginResult,
-    hook::{ExtensionPoint, Hook, HookID, RefAny},
+    hook::{ExtensionPoint, Hook, HookID},
     Plugin, PluginID, PluginManager,
 };
+
+// Define a trait for text filtering
+pub trait TextFilterTrait: Send + Sync {
+    fn filter(&self, text: &str) -> String;
+}
 
 // Define our extension point for text filtering
 pub struct TextFilter;
 impl ExtensionPoint for TextFilter {
-    type Input = RefAny<str>; // Use RefAny to handle references
-    type Output = String;
+    type HookTrait = dyn TextFilterTrait;
+}
+
+// Define implementations of the text filter trait
+struct UppercaseFilter;
+impl TextFilterTrait for UppercaseFilter {
+    fn filter(&self, text: &str) -> String {
+        text.to_uppercase()
+    }
+}
+
+struct ReverseFilter;
+impl TextFilterTrait for ReverseFilter {
+    fn filter(&self, text: &str) -> String {
+        text.chars().rev().collect()
+    }
 }
 
 // Define a simple text processor app
@@ -31,11 +50,8 @@ impl TextProcessor {
         // Basic functionality: convert to lowercase
         let result = text.to_lowercase();
 
-        // Create a reference wrapper
-        let text_ref = RefAny::new(text);
-
         // Apply any plugin filters that are registered
-        let filtered_results: Vec<String> = self.apply_filters(text_ref);
+        let filtered_results: Vec<String> = self.apply_filters(text);
 
         // Combine the results
         if filtered_results.is_empty() {
@@ -49,21 +65,16 @@ impl TextProcessor {
         }
     }
 
-    fn apply_filters(&self, text_ref: RefAny<str>) -> Vec<String> {
+    fn apply_filters(&self, text: &str) -> Vec<String> {
         let registry = self.plugin_manager.hook_registry();
 
         // Get all text filter hooks and apply them
         let filter_hooks = registry.get_by_extension_point::<TextFilter>();
 
-        // Create a new RefAny for each hook from the original string
-        let original_text = unsafe { text_ref.get() };
+        // Apply each filter to the text - no unsafe needed!
         filter_hooks
             .iter()
-            .map(|hook| {
-                // Create a fresh RefAny for each hook
-                let new_ref = RefAny::new(original_text);
-                hook.execute(new_ref)
-            })
+            .map(|hook| hook.hook().filter(text))
             .collect()
     }
 
@@ -80,24 +91,17 @@ impl TextProcessor {
 
         // Register hooks for each plugin
 
-        // Uppercase plugin - safely using the RefAny wrapper
-        let uppercase_hook = Hook::<TextFilter>::new(|text_ref: RefAny<str>| {
-            // Safely get the reference back with the right lifetime
-            let text = unsafe { text_ref.get() };
-            text.to_uppercase()
-        });
+        // Uppercase plugin - using trait implementation
+        let uppercase_hook = Hook::<TextFilter>::new(Box::new(UppercaseFilter));
         self.plugin_manager.hook_registry_mut().register(
-            &HookID::new("uppercase_plugin".into(), TextFilter::id(), None),
+            &HookID::new("uppercase_plugin", TextFilter::id(), None),
             uppercase_hook,
         )?;
 
-        // Reverse plugin - also safely using RefAny
-        let reverse_hook = Hook::<TextFilter>::new(|text_ref: RefAny<str>| {
-            let text = unsafe { text_ref.get() };
-            text.chars().rev().collect()
-        });
+        // Reverse plugin - using trait implementation
+        let reverse_hook = Hook::<TextFilter>::new(Box::new(ReverseFilter));
         self.plugin_manager.hook_registry_mut().register(
-            &HookID::new("reverse_plugin".into(), TextFilter::id(), None),
+            &HookID::new("reverse_plugin", TextFilter::id(), None),
             reverse_hook,
         )?;
 
