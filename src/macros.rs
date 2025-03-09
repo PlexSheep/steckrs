@@ -29,8 +29,8 @@ macro_rules! simple_plugin {
         }
 
         impl $plugin_name {
-            const ID: PluginID = $plugin_id;
-            const DESCRIPTION: &'static str = $description;
+            pub const ID: PluginID = $plugin_id;
+            pub const DESCRIPTION: &'static str = $description;
 
             pub fn new() -> Self {
                 Self { enabled: false }
@@ -63,16 +63,16 @@ macro_rules! simple_plugin {
 
 #[macro_export]
 macro_rules! register_hook {
-    ($registry_mut:expr, $plugin_id:expr, $expansion_point:ident, $hook:ident) => {
+    ($registry_mut:expr, $plugin_id:expr, $extension_point:ident, $hook:ident) => {
         $registry_mut.register(
-            &HookID::new($plugin_id, $expansion_point::id(), None),
-            Hook::<$expansion_point>::new(Box::new($hook)),
+            &HookID::new($plugin_id, $extension_point::id(), None),
+            Hook::<$extension_point>::new(Box::new($hook)),
         )?;
     };
-    ($registry_mut:expr, $plugin_id:expr, $expansion_point:ident, $hook:ident, $discriminant:expr) => {
+    ($registry_mut:expr, $plugin_id:expr, $extension_point:ident, $hook:ident, $discriminator:expr) => {
         $registry_mut.register(
-            &HookID::new($plugin_id, $expansion_point::id(), Some($discriminant)),
-            Hook::<$expansion_point>::new(Box::new($hook)),
+            &HookID::new($plugin_id, $extension_point::id(), Some($discriminator)),
+            Hook::<$extension_point>::new(Box::new($hook)),
         )?;
     };
 }
