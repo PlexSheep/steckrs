@@ -1,11 +1,14 @@
 // lib.rs
 use std::any::Any;
 use std::collections::HashMap;
+use std::error::Error;
 use std::fmt::Debug;
 
 pub mod error;
 pub mod hook;
 pub mod macros;
+
+use tracing::{error, warn};
 
 use self::error::PluginResult;
 use self::hook::HookRegistry;
@@ -31,6 +34,8 @@ pub trait Plugin: Any + Send + Sync + Debug {
     /// Disables the plugin
     fn disable(&mut self);
 
+    /// Called while the plugin is being loaded and used to register [Hooks](crate::hook::Hook)
+    fn register_hooks(&self, registry: &mut HookRegistry) -> PluginResult<()>;
     /// Called when the plugin is loaded
     fn on_load(&mut self) -> PluginResult<()> {
         Ok(())
@@ -77,22 +82,32 @@ impl PluginManager {
     }
 
     /// Register a statically linked plugin
-    pub fn load_plugin(&mut self, plugin: Box<dyn Plugin>) -> PluginResult<()> {
+    pub fn load_plugin(&mut self, mut plugin: Box<dyn Plugin>) -> PluginResult<()> {
         let id = plugin.id();
         if self.plugins.contains_key(id) {
             return Err(error::PluginError::AlreadyLoaded(id));
         }
 
+        // register the hooks
+        if let Err(e) = plugin.register_hooks(self.hook_registry_mut()) {
+            self.handle_error_during_load(e, id);
+        }
+        // Load the plugin
+        if let Err(e) = plugin.on_load() {
+            self.handle_error_during_load(e, id);
+        }
+
         // Store the plugin
         self.plugins.insert(id, plugin);
 
-        // Get a mutable reference to the just-stored plugin and call on_load
-        if let Some(plugin) = self.plugins.get_mut(id) {
-            // Load the plugin
-            plugin.on_load()?;
-        }
-
         Ok(())
+    }
+
+    fn handle_error_during_load(&mut self, e: impl Error, plugin_id: PluginID) {
+        error!("Could not register hooks of plugin {plugin_id}: {e}");
+        warn!("Trying to unload the plugin again... Will crash if this fails");
+        self.unload_plugin(plugin_id)
+            .expect("Could not unload bad plugin again");
     }
 
     /// Unload a plugin by ID

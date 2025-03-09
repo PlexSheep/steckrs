@@ -1,16 +1,22 @@
 use std::fmt::Debug;
 
-use steckrs::{
-    error::PluginResult,
-    extension_point,
-    hook::{ExtensionPoint, Hook, HookID},
-    register_hook, simple_plugin, Plugin, PluginID, PluginManager,
-};
+use steckrs::{error::PluginResult, extension_point, simple_plugin, PluginManager};
 
 // Main command processor application
 struct CommandProcessor {
     plugin_manager: PluginManager,
 }
+
+// Define the points where plugins can be called
+extension_point!(
+    CommandHandler /* the extension point */: CommandHandlerFunctions /* which functions the point has */,
+    fn can_handle(&self /* self is always needed */ , command: &str) -> bool,
+    fn handle(&self, command: &str, args: &[&str]) -> String,
+);
+extension_point!(
+    ByeExtPoint: ByeExtPointF,
+    fn say_bye(&self) -> String,
+);
 
 impl CommandProcessor {
     fn new() -> Self {
@@ -53,37 +59,6 @@ impl CommandProcessor {
         self.plugin_manager.enable_plugin(CorePlugin::ID)?;
         self.plugin_manager.enable_plugin(EchoPlugin::ID)?;
 
-        // Register hooks
-        register_hook!(
-            self.plugin_manager.hook_registry_mut(),
-            EchoPlugin::ID,
-            CommandHandler,
-            EchoHook
-        );
-        // NOTE: the CorePlugin registers two hooks for the same extension point. Therefore, it
-        // needs to specify a discriminator, in this case "help".
-        register_hook!(
-            self.plugin_manager.hook_registry_mut(),
-            CorePlugin::ID,
-            CommandHandler,
-            HelpHook,
-            "help"
-        );
-        register_hook!(
-            self.plugin_manager.hook_registry_mut(),
-            CorePlugin::ID,
-            CommandHandler,
-            VersionHook,
-            "version"
-        );
-        register_hook!(
-            self.plugin_manager.hook_registry_mut(),
-            CorePlugin::ID,
-            ByeExtPoint,
-            ByeHook,
-            "version"
-        );
-
         Ok(())
     }
 
@@ -105,25 +80,21 @@ impl CommandProcessor {
 simple_plugin!(
     CorePlugin,                                // Datatype Identifier in source code
     "core_plugin",                             // PluginID
-    "Core commands for the command processor"  // Description
+    "Core commands for the command processor", // Description
+    // register hooks for your plugin
+    hooks: [
+        (CommandHandler, HelpHook, "help"),         // if you register multiple hooks for an extension point
+        (CommandHandler, VersionHook, "version"),   // you need to add a discriminant
+        (ByeExtPoint, ByeHook)
+    ]
 );
 
+// Another even simpler plugin
 simple_plugin!(
     EchoPlugin,
     "echo_plugin",
-    "Echoes input back to the user and is a very simple plugin"
-);
-
-// Define a command processor extension point
-extension_point!(
-    CommandHandler /* the extension point */: CommandHandlerFunctions /* which functions the point has */,
-    fn can_handle(&self /* self is always needed */ , command: &str) -> bool,
-    fn handle(&self, command: &str, args: &[&str]) -> String,
-);
-
-extension_point!(
-    ByeExtPoint: ByeExtPointF,
-    fn say_bye(&self) -> String,
+    "Echoes input back to the user and is a very simple plugin",
+    hooks: [(CommandHandler, EchoHook)]
 );
 
 // Define hoooks into the extension point

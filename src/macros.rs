@@ -14,7 +14,7 @@ macro_rules! extension_point {
         pub struct $name;
 
         // Implement ExtensionPoint for the struct
-        impl ExtensionPoint for $name {
+        impl $crate::hook::ExtensionPoint for $name {
             type HookTrait = dyn $trait_name;
         }
     };
@@ -22,14 +22,15 @@ macro_rules! extension_point {
 
 #[macro_export]
 macro_rules! simple_plugin {
-    ($plugin_name:ident, $plugin_id:expr, $description:expr) => {
+        ($plugin_name:ident, $plugin_id:expr, $description:expr,
+     hooks: [$(($extension_point:ident, $hook_impl:ident $(, $discrim:expr)?)),* $(,)?]) => {
         #[derive(Debug)]
         pub struct $plugin_name {
             enabled: bool,
         }
 
         impl $plugin_name {
-            pub const ID: PluginID = $plugin_id;
+            pub const ID: $crate::PluginID = $plugin_id;
             pub const DESCRIPTION: &'static str = $description;
 
             pub fn new() -> Self {
@@ -37,8 +38,8 @@ macro_rules! simple_plugin {
             }
         }
 
-        impl Plugin for $plugin_name {
-            fn id(&self) -> PluginID {
+        impl $crate::Plugin for $plugin_name {
+            fn id(&self) -> $crate::PluginID {
                 Self::ID
             }
 
@@ -57,6 +58,15 @@ macro_rules! simple_plugin {
             fn disable(&mut self) {
                 self.enabled = false;
             }
+
+
+            fn register_hooks(&self, registry: &mut $crate::hook::HookRegistry) -> PluginResult<()> {
+                $(
+                    $crate::register_hook!(registry, Self::ID, $extension_point, $hook_impl $(, $discrim)?);
+                )*
+
+                Ok(())
+            }
         }
     };
 }
@@ -65,14 +75,22 @@ macro_rules! simple_plugin {
 macro_rules! register_hook {
     ($registry_mut:expr, $plugin_id:expr, $extension_point:ident, $hook:ident) => {
         $registry_mut.register(
-            &HookID::new($plugin_id, $extension_point::id(), None),
-            Hook::<$extension_point>::new(Box::new($hook)),
+            &$crate::hook::HookID::new(
+                $plugin_id,
+                <$extension_point as $crate::hook::ExtensionPoint>::id(),
+                None,
+            ),
+            $crate::hook::Hook::<$extension_point>::new(Box::new($hook)),
         )?;
     };
     ($registry_mut:expr, $plugin_id:expr, $extension_point:ident, $hook:ident, $discriminator:expr) => {
         $registry_mut.register(
-            &HookID::new($plugin_id, $extension_point::id(), Some($discriminator)),
-            Hook::<$extension_point>::new(Box::new($hook)),
+            &$crate::hook::HookID::new(
+                $plugin_id,
+                <$extension_point as $crate::hook::ExtensionPoint>::id(),
+                Some($discriminator),
+            ),
+            $crate::hook::Hook::<$extension_point>::new(Box::new($hook)),
         )?;
     };
 }
