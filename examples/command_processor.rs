@@ -7,48 +7,6 @@ use steckrs::{
     register_hook, simple_plugin, Plugin, PluginID, PluginManager,
 };
 
-// Define a command processor extension point
-extension_point!(CommandHandler: CommandHandlerFunctions,
-    fn can_handle(&self, command: &str) -> bool,
-    fn handle(&self, command: &str, args: &[&str]) -> String,
-);
-
-// Simple help command handler
-struct HelpCommandHandler;
-impl CommandHandlerFunctions for HelpCommandHandler {
-    fn can_handle(&self, command: &str) -> bool {
-        command == "help"
-    }
-
-    fn handle(&self, _command: &str, _args: &[&str]) -> String {
-        "Available commands: help, version, echo".to_string()
-    }
-}
-
-// Version command handler
-struct VersionCommandHandler;
-impl CommandHandlerFunctions for VersionCommandHandler {
-    fn can_handle(&self, command: &str) -> bool {
-        command == "version"
-    }
-
-    fn handle(&self, _command: &str, _args: &[&str]) -> String {
-        "Command Processor v1.0.0".to_string()
-    }
-}
-
-// Echo command handler
-struct EchoCommandHandler;
-impl CommandHandlerFunctions for EchoCommandHandler {
-    fn can_handle(&self, command: &str) -> bool {
-        command == "echo"
-    }
-
-    fn handle(&self, _command: &str, args: &[&str]) -> String {
-        args.join(" ")
-    }
-}
-
 // Main command processor application
 struct CommandProcessor {
     plugin_manager: PluginManager,
@@ -72,12 +30,12 @@ impl CommandProcessor {
 
         // Find a handler that can process this command
         let registry = self.plugin_manager.hook_registry();
-        let command_handlers = registry.get_by_extension_point::<CommandHandler>();
+        let hooks = registry.get_by_extension_point::<CommandHandler>();
 
-        for handler in command_handlers {
+        for hook in hooks {
             // NOTE: first come first serve
-            if handler.hook().can_handle(command) {
-                return handler.hook().handle(command, args);
+            if hook.inner().can_handle(command) {
+                return hook.inner().handle(command, args);
             }
         }
 
@@ -92,15 +50,15 @@ impl CommandProcessor {
             .load_plugin(Box::new(EchoPlugin::new()))?;
 
         // Enable plugins
-        self.plugin_manager.enable_plugin("core_plugin")?;
-        self.plugin_manager.enable_plugin("echo_plugin")?;
+        self.plugin_manager.enable_plugin(CorePlugin::ID)?;
+        self.plugin_manager.enable_plugin(EchoPlugin::ID)?;
 
         // Register hooks
         register_hook!(
             self.plugin_manager.hook_registry_mut(),
             EchoPlugin::ID,
             CommandHandler,
-            EchoCommandHandler
+            EchoHook
         );
         // NOTE: the CorePlugin registers two hooks for the same extension point. Therefore, it
         // needs to specify a discriminator, in this case "help".
@@ -108,34 +66,108 @@ impl CommandProcessor {
             self.plugin_manager.hook_registry_mut(),
             CorePlugin::ID,
             CommandHandler,
-            HelpCommandHandler,
+            HelpHook,
             "help"
         );
         register_hook!(
             self.plugin_manager.hook_registry_mut(),
             CorePlugin::ID,
             CommandHandler,
-            VersionCommandHandler,
+            VersionHook,
+            "version"
+        );
+        register_hook!(
+            self.plugin_manager.hook_registry_mut(),
+            CorePlugin::ID,
+            ByeExtPoint,
+            ByeHook,
             "version"
         );
 
         Ok(())
     }
+
+    fn end(&self) {
+        let registry = self.plugin_manager.hook_registry();
+        let hooks = registry.get_by_extension_point::<ByeExtPoint>();
+
+        for hook in hooks {
+            println!("{}", hook.inner().say_bye())
+        }
+    }
 }
 
 // Create a core plugin with basic functionality
+//
+// If you need a more complex struct for your plugin, please implement the Plugin trait
+// yourself. With some clever design, this might even allow you to use the plugin datatype to
+// run hooks directly, giving you access to your data.
 simple_plugin!(
-    CorePlugin,
-    "core_plugin",
-    "Core commands for the command processor"
+    CorePlugin,                                // Datatype Identifier in source code
+    "core_plugin",                             // PluginID
+    "Core commands for the command processor"  // Description
 );
 
-// Create a core plugin with basic functionality
 simple_plugin!(
     EchoPlugin,
     "echo_plugin",
     "Echoes input back to the user and is a very simple plugin"
 );
+
+// Define a command processor extension point
+extension_point!(
+    CommandHandler /* the extension point */: CommandHandlerFunctions /* which functions the point has */,
+    fn can_handle(&self /* self is always needed */ , command: &str) -> bool,
+    fn handle(&self, command: &str, args: &[&str]) -> String,
+);
+
+extension_point!(
+    ByeExtPoint: ByeExtPointF,
+    fn say_bye(&self) -> String,
+);
+
+// Define hoooks into the extension point
+struct HelpHook;
+impl CommandHandlerFunctions for HelpHook {
+    fn can_handle(&self, command: &str) -> bool {
+        command == "help"
+    }
+
+    fn handle(&self, _command: &str, _args: &[&str]) -> String {
+        "Available commands: help, version, echo".to_string()
+    }
+}
+
+// Version command handler
+struct VersionHook;
+impl CommandHandlerFunctions for VersionHook {
+    fn can_handle(&self, command: &str) -> bool {
+        command == "version"
+    }
+
+    fn handle(&self, _command: &str, _args: &[&str]) -> String {
+        "Command Processor v1.0.0".to_string()
+    }
+}
+
+// Echo command handler
+struct EchoHook;
+impl CommandHandlerFunctions for EchoHook {
+    fn can_handle(&self, command: &str) -> bool {
+        command == "echo"
+    }
+
+    fn handle(&self, _command: &str, args: &[&str]) -> String {
+        args.join(" ")
+    }
+}
+
+struct ByeHook;
+impl ByeExtPointF for ByeHook {
+    fn say_bye(&self) -> String {
+        "さようなら".to_string()
+    }
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create and initialize command processor
@@ -166,6 +198,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Response: {}",
         processor.process_command("echo This won't work anymore")
     );
+
+    println!("---");
+
+    processor.end();
 
     Ok(())
 }
