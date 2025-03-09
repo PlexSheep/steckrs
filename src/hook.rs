@@ -189,7 +189,9 @@ impl HookRegistry {
     }
 
     pub fn get_by_extension_point<E: ExtensionPoint>(&self) -> Vec<&Hook<E>> {
-        let Some(boxed_hooks) = self.hooks.get(&E::id()) else {return Vec::new()};
+        let Some(boxed_hooks) = self.hooks.get(&E::id()) else {
+            return Vec::new();
+        };
         boxed_hooks
             .iter()
             .filter_map(|(_k, v)| v.downcast())
