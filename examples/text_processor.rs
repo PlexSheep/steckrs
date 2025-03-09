@@ -153,14 +153,6 @@ impl Plugin for UppercasePlugin {
         println!("Uppercase plugin unloaded!");
         Ok(())
     }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 }
 
 // A simple plugin that reverses text
@@ -204,14 +196,6 @@ impl Plugin for ReversePlugin {
     fn on_unload(&mut self) -> PluginResult<()> {
         println!("Reverse plugin unloaded!");
         Ok(())
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 }
 

@@ -39,12 +39,6 @@ pub trait Plugin: Any + Send + Sync + Debug {
     fn on_unload(&mut self) -> PluginResult<()> {
         Ok(())
     }
-
-    /// Convert to Any for downcasting
-    fn as_any(&self) -> &dyn Any;
-
-    /// Convert to mutable Any for downcasting
-    fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
 /// Plugin manager that handles plugin loading, execution, and lifecycle
@@ -120,18 +114,6 @@ impl PluginManager {
     /// Get a mutable reference to a plugin by ID
     pub fn get_plugin_mut(&mut self, id: PluginID) -> Option<&mut dyn Plugin> {
         self.plugins.get_mut(id).map(|p| p.as_mut())
-    }
-
-    /// Get a typed reference to a plugin (with downcasting)
-    pub fn get_plugin_as<T: 'static>(&self, id: PluginID) -> Option<&T> {
-        self.get_plugin(id)
-            .and_then(|p| p.as_any().downcast_ref::<T>())
-    }
-
-    /// Get a typed mutable reference to a plugin (with downcasting)
-    pub fn get_plugin_as_mut<T: 'static>(&mut self, id: PluginID) -> Option<&mut T> {
-        self.get_plugin_mut(id)
-            .and_then(|p| p.as_any_mut().downcast_mut::<T>())
     }
 
     /// Get all plugin IDs
