@@ -23,12 +23,12 @@ impl HookID {
     pub fn new(
         plugin_id: PluginID,
         extension_point_id: ExtensionPointID,
-        discriminator: Option<String>,
+        discriminator: Option<&'static str>,
     ) -> Self {
         HookID {
             plugin_id,
             extension_point_id,
-            discriminator,
+            discriminator: discriminator.map(|s| s.into()),
         }
     }
 }

@@ -4,7 +4,7 @@ use steckrs::{
     error::PluginResult,
     extension_point,
     hook::{ExtensionPoint, Hook, HookID},
-    Plugin, PluginID, PluginManager,
+    simple_plugin, Plugin, PluginID, PluginManager,
 };
 
 // Define a command processor extension point
@@ -88,8 +88,6 @@ impl CommandProcessor {
         // Load core plugins
         self.plugin_manager
             .load_plugin(Box::new(CorePlugin::new()))?;
-
-        // Load optional plugins
         self.plugin_manager
             .load_plugin(Box::new(EchoPlugin::new()))?;
 
@@ -98,123 +96,36 @@ impl CommandProcessor {
         self.plugin_manager.enable_plugin("echo_plugin")?;
 
         // Register hooks
-        let help_hook = Hook::<CommandHandler>::new(Box::new(HelpCommandHandler));
         self.plugin_manager.hook_registry_mut().register(
-            &HookID::new(
-                "core_plugin",
-                CommandHandler::id(),
-                Some("help".to_string()),
-            ),
-            help_hook,
+            &HookID::new(CorePlugin::ID, CommandHandler::id(), Some("help")),
+            Hook::<CommandHandler>::new(Box::new(HelpCommandHandler)),
         )?;
-
-        let version_hook = Hook::<CommandHandler>::new(Box::new(VersionCommandHandler));
         self.plugin_manager.hook_registry_mut().register(
-            &HookID::new(
-                "core_plugin",
-                CommandHandler::id(),
-                Some("version".to_string()),
-            ),
-            version_hook,
+            &HookID::new(CorePlugin::ID, CommandHandler::id(), Some("version")),
+            Hook::<CommandHandler>::new(Box::new(VersionCommandHandler)),
         )?;
-
-        let echo_hook = Hook::<CommandHandler>::new(Box::new(EchoCommandHandler));
         self.plugin_manager.hook_registry_mut().register(
-            &HookID::new("echo_plugin", CommandHandler::id(), None),
-            echo_hook,
+            &HookID::new(EchoPlugin::ID, CommandHandler::id(), None),
+            Hook::<CommandHandler>::new(Box::new(EchoCommandHandler)),
         )?;
 
         Ok(())
     }
 }
 
-// Core plugin with basic commands
-#[derive(Debug)]
-struct CorePlugin {
-    enabled: bool,
-}
+// Create a core plugin with basic functionality
+simple_plugin!(
+    CorePlugin,
+    "core_plugin",
+    "Core commands for the command processor"
+);
 
-impl CorePlugin {
-    fn new() -> Self {
-        Self { enabled: false }
-    }
-}
-
-impl Plugin for CorePlugin {
-    fn id(&self) -> PluginID {
-        "core_plugin"
-    }
-
-    fn description(&self) -> &str {
-        "Core commands for the command processor"
-    }
-
-    fn is_enabled(&self) -> bool {
-        self.enabled
-    }
-
-    fn enable(&mut self) {
-        self.enabled = true;
-    }
-
-    fn disable(&mut self) {
-        self.enabled = false;
-    }
-
-    fn on_load(&mut self) -> PluginResult<()> {
-        println!("Core plugin loaded!");
-        Ok(())
-    }
-
-    fn on_unload(&mut self) -> PluginResult<()> {
-        println!("Core plugin unloaded!");
-        Ok(())
-    }
-}
-
-// Echo plugin for echoing input
-#[derive(Debug)]
-struct EchoPlugin {
-    enabled: bool,
-}
-
-impl EchoPlugin {
-    fn new() -> Self {
-        Self { enabled: false }
-    }
-}
-
-impl Plugin for EchoPlugin {
-    fn id(&self) -> PluginID {
-        "echo_plugin"
-    }
-
-    fn description(&self) -> &str {
-        "Echoes input back to the user"
-    }
-
-    fn is_enabled(&self) -> bool {
-        self.enabled
-    }
-
-    fn enable(&mut self) {
-        self.enabled = true;
-    }
-
-    fn disable(&mut self) {
-        self.enabled = false;
-    }
-
-    fn on_load(&mut self) -> PluginResult<()> {
-        println!("Echo plugin loaded!");
-        Ok(())
-    }
-
-    fn on_unload(&mut self) -> PluginResult<()> {
-        println!("Echo plugin unloaded!");
-        Ok(())
-    }
-}
+// Create a core plugin with basic functionality
+simple_plugin!(
+    EchoPlugin,
+    "echo_plugin",
+    "Echoes input back to the user and is a very simple plugin"
+);
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create and initialize command processor

@@ -5,6 +5,7 @@ use std::fmt::Debug;
 
 pub mod error;
 pub mod hook;
+pub mod macros;
 
 use self::error::PluginResult;
 use self::hook::HookRegistry;
@@ -156,26 +157,4 @@ impl PluginManager {
             None => Err(error::PluginError::NotFound(id)),
         }
     }
-}
-
-#[macro_export]
-macro_rules! extension_point {
-    ($name:ident: $trait_name:ident,
-        $(fn $method_name:ident(&$self_param:tt $(, $param_name:ident: $param_type:ty)*) -> $return_type:ty),* $(,)?
-    ) => {
-        // Define the trait with all methods
-        pub trait $trait_name: Send + Sync {
-            $(
-                fn $method_name(&$self_param $(, $param_name: $param_type)*) -> $return_type;
-            )*
-        }
-
-        // Define the extension point struct
-        pub struct $name;
-
-        // Implement ExtensionPoint for the struct
-        impl ExtensionPoint for $name {
-            type HookTrait = dyn $trait_name;
-        }
-    };
 }
