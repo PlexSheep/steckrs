@@ -16,7 +16,7 @@ pub type PluginID = &'static str;
 /// This is typically defined in your main application and re-exported here
 pub trait Plugin: Any + Send + Sync + Debug {
     /// Returns the name of the plugin
-    fn name(&self) -> PluginID;
+    fn id(&self) -> PluginID;
 
     /// Returns a description of the plugin
     fn description(&self) -> &str;
@@ -83,7 +83,7 @@ impl PluginManager {
 
     /// Register a statically linked plugin
     pub fn load_plugin(&mut self, plugin: Box<dyn Plugin>) -> PluginResult<()> {
-        let id = plugin.name();
+        let id = plugin.id();
         if self.plugins.contains_key(id) {
             return Err(error::PluginError::AlreadyLoaded(id));
         }
