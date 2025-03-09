@@ -60,3 +60,19 @@ macro_rules! simple_plugin {
         }
     };
 }
+
+#[macro_export]
+macro_rules! register_hook {
+    ($registry_mut:expr, $plugin_id:expr, $expansion_point:ident, $hook:ident) => {
+        $registry_mut.register(
+            &HookID::new($plugin_id, $expansion_point::id(), None),
+            Hook::<$expansion_point>::new(Box::new($hook)),
+        )?;
+    };
+    ($registry_mut:expr, $plugin_id:expr, $expansion_point:ident, $hook:ident, $discriminant:expr) => {
+        $registry_mut.register(
+            &HookID::new($plugin_id, $expansion_point::id(), Some($discriminant)),
+            Hook::<$expansion_point>::new(Box::new($hook)),
+        )?;
+    };
+}

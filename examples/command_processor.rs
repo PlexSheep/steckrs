@@ -4,7 +4,7 @@ use steckrs::{
     error::PluginResult,
     extension_point,
     hook::{ExtensionPoint, Hook, HookID},
-    simple_plugin, Plugin, PluginID, PluginManager,
+    register_hook, simple_plugin, Plugin, PluginID, PluginManager,
 };
 
 // Define a command processor extension point
@@ -96,18 +96,28 @@ impl CommandProcessor {
         self.plugin_manager.enable_plugin("echo_plugin")?;
 
         // Register hooks
-        self.plugin_manager.hook_registry_mut().register(
-            &HookID::new(CorePlugin::ID, CommandHandler::id(), Some("help")),
-            Hook::<CommandHandler>::new(Box::new(HelpCommandHandler)),
-        )?;
-        self.plugin_manager.hook_registry_mut().register(
-            &HookID::new(CorePlugin::ID, CommandHandler::id(), Some("version")),
-            Hook::<CommandHandler>::new(Box::new(VersionCommandHandler)),
-        )?;
-        self.plugin_manager.hook_registry_mut().register(
-            &HookID::new(EchoPlugin::ID, CommandHandler::id(), None),
-            Hook::<CommandHandler>::new(Box::new(EchoCommandHandler)),
-        )?;
+        register_hook!(
+            self.plugin_manager.hook_registry_mut(),
+            EchoPlugin::ID,
+            CommandHandler,
+            EchoCommandHandler
+        );
+        // NOTE: the CorePlugin registers two hooks for the same extension point. Therefore, it
+        // needs to specify a discriminator, in this case "help".
+        register_hook!(
+            self.plugin_manager.hook_registry_mut(),
+            CorePlugin::ID,
+            CommandHandler,
+            HelpCommandHandler,
+            "help"
+        );
+        register_hook!(
+            self.plugin_manager.hook_registry_mut(),
+            CorePlugin::ID,
+            CommandHandler,
+            VersionCommandHandler,
+            "version"
+        );
 
         Ok(())
     }
@@ -137,7 +147,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "help",
         "version",
         "echo Hello, Plugin System!",
-        "unknown command",
+        "thiscommanddoesnotexist",
     ];
 
     for cmd in &commands {
