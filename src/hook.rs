@@ -22,6 +22,36 @@ pub struct HookID {
     pub discriminator: Option<String>,
 }
 
+// A wrapper for references that lets us control lifetimes
+#[derive(Copy, Clone)]
+pub struct RefAny<T: ?Sized> {
+    // Raw pointer to data
+    ptr: *const T,
+    // Phantom data to tie the type
+    _marker: PhantomData<T>,
+}
+
+// Safe implementations for RefAny
+impl<T: ?Sized> RefAny<T> {
+    // Create a new wrapper from a reference (can be used with any lifetime)
+    pub fn new<'a>(reference: &'a T) -> Self {
+        RefAny {
+            ptr: reference as *const T,
+            _marker: PhantomData,
+        }
+    }
+
+    // Get a reference with the desired lifetime
+    // Safety: The caller must ensure the original data lives at least as long as 'a
+    pub unsafe fn get<'a>(&self) -> &'a T {
+        &*self.ptr
+    }
+}
+
+// Make RefAny safe to send and sync
+unsafe impl<T: ?Sized + Sync> Send for RefAny<T> {}
+unsafe impl<T: ?Sized + Sync> Sync for RefAny<T> {}
+
 /// Extension point trait - defines the interface for a specific hook type
 pub trait ExtensionPoint: 'static {
     /// Unique identifier for this extension point
@@ -212,7 +242,7 @@ impl HookRegistry {
         let Some(boxed_hooks) = self.hooks.get(&E::id()) else {return Vec::new()};
         boxed_hooks
             .iter()
-            .map(|(_k, v)| v.downcast().expect("could not downcast BoxedHook to Hook"))
+            .filter_map(|(_k, v)| v.downcast())
             .collect()
     }
 
