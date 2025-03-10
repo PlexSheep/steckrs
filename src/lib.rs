@@ -51,8 +51,8 @@
 //!
 //! // Define an extension point
 //! extension_point!(
-//!     GreeterExtension: GreeterTrait,
-//!     fn greet(&self, name: &str) -> String,
+//!     GreeterExtension: GreeterTrait;
+//!     fn greet(&self, name: &str) -> String;
 //! );
 //!
 //! // Create a plugin
@@ -144,8 +144,8 @@ pub type PluginID = &'static str;
 /// ```
 /// # use steckrs::{extension_point, simple_plugin, PluginManager};
 /// # extension_point!(
-/// #     GreeterExtension: GreeterTrait,
-/// #     fn greet(&self, name: &str) -> String,
+/// #     GreeterExtension: GreeterTrait;
+/// #     fn greet(&self, name: &str) -> String;
 /// # );
 /// #
 /// # struct EnglishGreeter;
@@ -274,8 +274,8 @@ pub trait Plugin: Any + Send + Sync + Debug {
 ///
 /// // Define extension point
 /// extension_point!(
-///     ExampleExt: ExampleTrait,
-///     fn do_something(&self) -> &'static str,
+///     ExampleExt: ExampleTrait;
+///     fn do_something(&self) -> &'static str;
 /// );
 ///
 /// // Define plugin
