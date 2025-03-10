@@ -1,45 +1,4 @@
 [changelog]
-header = """# Changelog
-
-## [Unreleased]
-"""
-
-body = """
-
-{% macro print_commit(commit) -%}
-    - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
-      {% if commit.breaking %}[**breaking**] {% endif %}\
-      {{ commit.message | upper_first }} - \
-      ([{{ commit.id | truncate(length=7, end="") }}]({{ remote.link }}/commit/{{ commit.id }}))\
-{% endmacro -%}
-
-{% if version %}\
-    {% if previous.version %}\
-        ## [{{ version | trim_start_matches(pat="v") }}]({{ release_link }})
-    {% else %}\
-        ## [{{ version | trim_start_matches(pat="v") }}]
-    {% endif %}\
-{% endif %}\
-
-{% for group, commits in commits
-| filter(attribute="merge_commit", value=false)
-| unique(attribute="message")
-| group_by(attribute="group") %}
-    ### {{ group | striptags | trim | upper_first }}
-    {% for commit in commits
-    | filter(attribute="scope")
-    | sort(attribute="scope") %}
-        {{ self::print_commit(commit=commit) }}
-    {%- endfor -%}
-    {% raw %}\n{% endraw %}\
-    {%- for commit in commits %}
-        {%- if not commit.scope -%}
-            {{ self::print_commit(commit=commit) }}
-        {% endif -%}
-    {% endfor -%}
-{% endfor %}\n
-"""
-
 commit_parsers = [
 	{ message = "^feat", group = "<!-- 0 -->⛰️ Features" },
 	{ message = "^fix", group = "<!-- 1 -->🐛 Bug Fixes" },
