@@ -28,7 +28,8 @@
 /// # Examples
 ///
 /// ```
-/// use steckrs::extension_point;
+/// use steckrs::{extension_point,Plugin};
+/// use steckrs::hook::{Hook, ExtensionPoint};
 ///
 /// // Define an extension point with a single method
 /// extension_point!(
@@ -51,8 +52,6 @@
 ///     }
 /// }
 ///
-/// // Use the extension point
-/// use steckrs::hook::{Hook, ExtensionPoint};
 ///
 /// let hook = Hook::<Logger>::new(Box::new(ConsoleLogger));
 /// hook.inner().log("Hello from hook!");
@@ -66,6 +65,24 @@ macro_rules! extension_point {
         pub trait $trait_name: Send + Sync {
             $(
                 fn $method_name(&$self_param $(, $param_name: $param_type)*) -> $return_type;
+            )*
+        }
+
+        // Define the extension point struct
+        pub struct $name;
+
+        // Implement ExtensionPoint for the struct
+        impl $crate::hook::ExtensionPoint for $name {
+            type HookTrait = dyn $trait_name;
+        }
+    };
+    ($name:ident: $trait_name:ident,
+        $(fn $method_name:ident(&$self_param:tt $(, $param_name:ident: $param_type:ty)*)),* $(,)?
+    ) => {
+        // Define the trait with all methods
+        pub trait $trait_name: Send + Sync {
+            $(
+                fn $method_name(&$self_param $(, $param_name: $param_type)*);
             )*
         }
 
@@ -97,7 +114,7 @@ macro_rules! extension_point {
 /// # Examples
 ///
 /// ```
-/// use steckrs::{extension_point, simple_plugin};
+/// use steckrs::{extension_point, simple_plugin, Plugin};
 ///
 /// // Define an extension point
 /// extension_point!(
@@ -201,7 +218,7 @@ macro_rules! simple_plugin {
             }
 
 
-            fn register_hooks(&self, registry: &mut $crate::hook::HookRegistry) -> PluginResult<()> {
+            fn register_hooks(&self, registry: &mut $crate::hook::HookRegistry) -> $crate::error::PluginResult<()> {
                 $(
                     $crate::register_hook!(registry, Self::ID, $extension_point, $hook_impl $(, $discrim)?);
                 )*
@@ -226,10 +243,18 @@ macro_rules! simple_plugin {
 /// - `$hook_trait`: The trait type for the hook
 /// - `$hook_impl`: The implementation type for the hook
 ///
+/// # Panics
+///
+/// This macro will panic if [`crate::hook::HookRegistry::register`] fails.
+///
 /// # Examples
 ///
 /// ```
-/// use steckrs::{extension_point, register_hook, hook::{HookRegistry, ExtensionPoint}};
+/// use steckrs::{
+///     extension_point,
+///     hook::{ExtensionPoint, HookRegistry},
+///     register_hook,
+/// };
 ///
 /// extension_point!(
 ///     Calculator: CalculatorTrait,
@@ -249,7 +274,7 @@ macro_rules! simple_plugin {
 /// register_hook!(
 ///     registry,
 ///     "calculator_plugin", // a plugin id would be better
-///     Calculator::id(),
+///     Calculator,
 ///     SimpleCalculator
 /// );
 ///
@@ -258,31 +283,30 @@ macro_rules! simple_plugin {
 /// assert_eq!(hooks.len(), 1);
 /// assert_eq!(hooks[0].inner().add(2, 3), 5);
 /// ```
-///
-/// # Panics
-///
-/// This macro will panic if hook registration fails (e.g., if a hook with the same ID
-/// is already registered).
 #[macro_export]
 macro_rules! register_hook {
     ($registry_mut:expr, $plugin_id:expr, $extension_point:ident, $hook:ident) => {
-        $registry_mut.register(
-            &$crate::hook::HookID::new(
-                $plugin_id,
-                <$extension_point as $crate::hook::ExtensionPoint>::id(),
-                None,
-            ),
-            $crate::hook::Hook::<$extension_point>::new(Box::new($hook)),
-        )?;
+        $registry_mut
+            .register(
+                &$crate::hook::HookID::new(
+                    $plugin_id,
+                    <$extension_point as $crate::hook::ExtensionPoint>::id(),
+                    None,
+                ),
+                $crate::hook::Hook::<$extension_point>::new(Box::new($hook)),
+            )
+            .expect("could not register hook")
     };
     ($registry_mut:expr, $plugin_id:expr, $extension_point:ident, $hook:ident, $discriminator:expr) => {
-        $registry_mut.register(
-            &$crate::hook::HookID::new(
-                $plugin_id,
-                <$extension_point as $crate::hook::ExtensionPoint>::id(),
-                Some($discriminator),
-            ),
-            $crate::hook::Hook::<$extension_point>::new(Box::new($hook)),
-        )?;
+        $registry_mut
+            .register(
+                &$crate::hook::HookID::new(
+                    $plugin_id,
+                    <$extension_point as $crate::hook::ExtensionPoint>::id(),
+                    Some($discriminator),
+                ),
+                $crate::hook::Hook::<$extension_point>::new(Box::new($hook)),
+            )
+            .expect("could not register hook")
     };
 }
