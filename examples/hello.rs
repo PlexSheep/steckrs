@@ -19,7 +19,7 @@ impl GreeterTrait for EnglishGreeter {
 
 // Create a plugin with documentation
 simple_plugin!(
-    /// Plugin providing English greeting functionality
+    /// A Plugin providing English greeting functionality
     HelloPlugin,
     "hello_plugin",
     "A simple greeting plugin",
