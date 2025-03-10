@@ -111,8 +111,8 @@ macro_rules! extension_point {
 ///
 /// // Define an extension point
 /// extension_point!(
-///     Greeter: GreeterTrait,
-///     fn greet(&self, name: &str) -> String,
+///     Greeter: GreeterTrait;
+///     fn greet(&self, name: &str) -> String;
 /// );
 ///
 /// // Implement the extension point
@@ -145,8 +145,8 @@ macro_rules! extension_point {
 /// }
 ///
 /// extension_point!(
-///     Farewell: FarewellTrait,
-///     fn say_goodbye(&self, name: &str) -> String,
+///     Farewell: FarewellTrait;
+///     fn say_goodbye(&self, name: &str) -> String;
 /// );
 ///
 /// struct SimpleFarewell;
@@ -258,8 +258,8 @@ macro_rules! simple_plugin {
 /// };
 ///
 /// extension_point!(
-///     Calculator: CalculatorTrait,
-///     fn add(&self, a: i32, b: i32) -> i32,
+///     Calculator: CalculatorTrait;
+///     fn add(&self, a: i32, b: i32) -> i32;
 /// );
 ///
 /// struct SimpleCalculator;
