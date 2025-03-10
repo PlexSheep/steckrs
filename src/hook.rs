@@ -160,10 +160,6 @@ impl HookID {
     }
 }
 
-pub trait HookImpl {
-    fn name(&self) -> &'static str;
-}
-
 /// Defines an extension point where plugins can hook into the application.
 ///
 /// An extension point is essentially a contract (trait) that plugins can implement.
