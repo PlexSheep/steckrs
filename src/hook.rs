@@ -84,6 +84,7 @@ pub type ExtensionPointID = std::any::TypeId;
 /// use steckrs::hook::{HookID, ExtensionPoint};
 ///
 /// // Define a trivial extension point
+/// #[derive(Ord, Eq, PartialOrd, PartialEq)]
 /// struct MyExtPoint;
 /// impl ExtensionPoint for MyExtPoint {
 ///     type HookTrait = dyn Send + Sync; // a real point would have it's own trait
@@ -128,6 +129,7 @@ impl HookID {
     /// use steckrs::hook::{HookID, ExtensionPoint};
     ///
     /// // Define a trivial extension point
+    /// #[derive(Ord, Eq, PartialOrd, PartialEq)]
     /// struct LoggerExtPoint;
     /// impl ExtensionPoint for LoggerExtPoint {
     ///     type HookTrait = dyn Send + Sync;
@@ -198,6 +200,7 @@ pub trait HookImpl {
 /// }
 ///
 /// // Define the extension point
+/// #[derive(Ord, Eq, PartialOrd, PartialEq)]
 /// pub struct TextFormatter;
 ///
 /// impl ExtensionPoint for TextFormatter {
@@ -218,6 +221,7 @@ pub trait ExtensionPoint: Eq + Ord + 'static {
     /// ```
     /// use steckrs::hook::ExtensionPoint;
     ///
+    /// #[derive(Ord, Eq, PartialOrd, PartialEq)]
     /// struct MyExtPoint;
     /// impl ExtensionPoint for MyExtPoint {
     ///     type HookTrait = dyn Send + Sync;
@@ -239,6 +243,7 @@ pub trait ExtensionPoint: Eq + Ord + 'static {
     /// ```
     /// use steckrs::hook::ExtensionPoint;
     ///
+    /// #[derive(Ord, Eq, PartialOrd, PartialEq)]
     /// struct CustomValidator;
     /// impl ExtensionPoint for CustomValidator {
     ///     type HookTrait = dyn Send + Sync;
@@ -522,6 +527,7 @@ impl BoxedHook {
     /// assert_eq!(typed_hook.unwrap().inner().count(), 1);
     ///
     /// // Failed downcast (trying to downcast to wrong type)
+    /// #[derive(Ord,Eq,PartialOrd,PartialEq)]
     /// struct OtherExtPoint;
     /// impl ExtensionPoint for OtherExtPoint {
     ///     type HookTrait = dyn Send + Sync;
@@ -625,11 +631,14 @@ impl Debug for BoxedHook {
 ///
 /// // Test both validators
 /// let short = "ab";
-/// let good = "good length";
+/// let good = "jigglypuff";
 /// let long = "this string is too long for the max validator";
 ///
-/// // Neither validator passes for short
-/// assert!(!hooks[0].inner().validate(short));
+/// dbg!(hooks[0].name()); // maxhook
+/// dbg!(hooks[1].name()); // minhook
+///
+/// // Only the max len passes for the very short one
+/// assert!(hooks[0].inner().validate(short));
 /// assert!(!hooks[1].inner().validate(short));
 ///
 /// // Both validators pass for good
@@ -637,8 +646,8 @@ impl Debug for BoxedHook {
 /// assert!(hooks[1].inner().validate(good));
 ///
 /// // Min passes but max fails for long
-/// assert!(hooks[0].inner().validate(long));
-/// assert!(!hooks[1].inner().validate(long));
+/// assert!(!hooks[0].inner().validate(long));
+/// assert!(hooks[1].inner().validate(long));
 /// ```
 #[derive(Debug, Default)]
 pub struct HookRegistry {
@@ -748,11 +757,11 @@ impl HookRegistry {
     /// let id = HookID::new("parser_plugin", Parser::id(), None);
     ///
     /// registry.register(&id, hook).unwrap();
-    /// assert!(registry.exists::<Parser>(&id));
+    /// assert!(registry.exists(&id));
     ///
     /// let removed = registry.deregister(&id);
     /// assert!(removed.is_some());
-    /// assert!(!registry.exists::<Parser>(&id));
+    /// assert!(!registry.exists(&id));
     /// ```
     pub fn deregister(&mut self, id: &HookID) -> Option<BoxedHook> {
         let hook = self.get_by_id(id)?;
@@ -1079,10 +1088,11 @@ impl HookRegistry {
     /// validators.iter().for_each(|v|{dbg!(v.name());});
     ///
     /// // Test the validators
+    /// // 0 is len, 2 is num
     /// assert!(validators[0].inner().validate("123"));
     /// assert!(validators[1].inner().validate("123"));
-    /// assert!(validators[1].inner().validate("abc"));
-    /// assert!(!validators[0].inner().validate("abc"));
+    /// assert!(validators[0].inner().validate("abc"));
+    /// assert!(!validators[1].inner().validate("abc"));
     /// ```
     #[must_use]
     pub fn get_by_extension_point<E: ExtensionPoint>(&self) -> Vec<&Hook<E>> {
