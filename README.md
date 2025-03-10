@@ -32,7 +32,7 @@
 * [crates.io](https://crates.io/crates/steckrs)
 * [Documentation on docs.rs](https://docs.rs/steckrs/latest/steckrs/)
 
-A lightweight, trait-based plugin system for Rust applications. 
+A lightweight, trait-based plugin system for Rust applications.
 The name "steckrs" is a wordplay combining the German word "Stecker" (meaning "plug" or "connector") and the Rust file extension (.rs).
 
 ## Features
@@ -154,8 +154,11 @@ For more complex scenarios, you can implement the `Plugin` trait directly, allow
 
 ## Planned features
 
-- **Dynamic Loading**: It would be cool if plugins could be loaded from dynamic 
+- **Dynamic Loading**: It would be cool if plugins could be loaded from dynamic
   libraries in the future.
+- **Generics Support**: Currently, handling functions with type parameters is
+  difficult in the traits that the extension points implement, because they cannot
+  be made into trade objects with `dyn` then.
 
 ## Contributing
 
