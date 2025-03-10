@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/PlexSheep/steckrs/compare/v0.1.1...v0.1.2)
+
+### ⛰️ Features
+
+- Update extension_point and simple_plugin macro to be more flexible and allow doc comments - ([a84cb9b](https://github.com/PlexSheep/steckrs/commit/a84cb9b8f05b5f74a78bc1ad1162ccb7a7ad992a))
+
+### 📚 Documentation
+
+- Note that generics are difficult in the readme #7 - ([32a2654](https://github.com/PlexSheep/steckrs/commit/32a265442fd5c99588014a5333415bc621108b91))
+- Set license to LGPL-3.0-or-later - ([3924e18](https://github.com/PlexSheep/steckrs/commit/3924e180bc524578c522d768d329e082c162c63d))
+- Fix usages of macros in doc examples for changes to the macros - ([c36e9ff](https://github.com/PlexSheep/steckrs/commit/c36e9ff630f196333c24d5a6b973566a34c24b4a))
+
+### ⚙️ Miscellaneous Tasks
+
+- Remove commented out example code - ([b17d02e](https://github.com/PlexSheep/steckrs/commit/b17d02e6e168128dd6454364bb50d57248bd9d0c))
+
+
 ## [0.1.1]
 
 ### ⛰️ Features
