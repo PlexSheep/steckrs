@@ -8,18 +8,6 @@ extension_point!(
     fn greet(&self, name: &str) -> String;
 );
 
-// For a version with associated types, you could do:
-// extension_point!(
-//     /// Extension point for localized greeting functionality
-//     LocalizedGreeterExtension:
-//     /// Trait defining localized greeting operations
-//     LocalizedGreeterTrait,
-//     /// The language type for this greeter
-//     type Language: Send + Sync;
-//     /// Returns a greeting for the given name in the implementation's language
-//     fn greet(&self, name: &str) -> String,
-// );
-
 /// English implementation of the greeter
 struct EnglishGreeter;
 impl GreeterTrait for EnglishGreeter {
