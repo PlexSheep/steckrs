@@ -7,6 +7,7 @@ extension_point!(
 );
 
 // Implement a hook
+/// English implementation of the greeter
 struct EnglishGreeter;
 impl GreeterTrait for EnglishGreeter {
     fn greet(&self, name: &str) -> String {
