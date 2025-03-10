@@ -2,16 +2,30 @@
 name = "steckrs"
 version = "0.1.0"
 edition = "2021"
-publish = false
+publish = true
 authors = ["Christoph J. Scherr <software@cscherr.de>"]
 license = "MIT"
-description = "small trait based plugin system for rust "
+description = "A lightweight, trait-based plugin system for Rust applications and libraries"
 readme = "README.md"
 homepage = "https://github.com/PlexSheep/steckrs"
 repository = "https://github.com/PlexSheep/steckrs"
-
+documentation = "https://docs.rs/steckrs"
+keywords = ["plugin", "extension", "hook", "modular", "framework"]
+categories = ["rust-patterns", "development-tools", "api-bindings"]
+exclude = [".github/"]
 
 [dependencies]
 anyhow = "1.0.97"
 thiserror = "2.0.12"
 tracing = "0.1.41"
+
+[dev-dependencies]
+
+[features]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[badges]
+maintenance = { status = "actively-developed" }
