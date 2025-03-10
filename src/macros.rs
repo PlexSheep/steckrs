@@ -67,7 +67,7 @@ macro_rules! extension_point {
             )*
         }
 
-        #[derive(Debug)]
+        #[derive(Debug, Ord, Eq, PartialEq, PartialOrd, Copy, Clone, Hash)]
         pub struct $name;
 
         impl $crate::hook::ExtensionPoint for $name {
@@ -83,7 +83,7 @@ macro_rules! extension_point {
             )*
         }
 
-        #[derive(Debug)]
+        #[derive(Debug, Ord, Eq, PartialEq, PartialOrd, Copy, Clone, Hash)]
         pub struct $name;
 
         impl $crate::hook::ExtensionPoint for $name {

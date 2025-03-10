@@ -37,7 +37,7 @@
 //! }
 //!
 //! // Create a hook
-//! let hook = Hook::<Greeter>::new(Box::new(EnglishGreeter));
+//! let hook = Hook::<Greeter>::new(Box::new(EnglishGreeter), "myhook");
 //!
 //! // Create a hook ID
 //! let hook_id = steckrs::hook::HookID::new(
@@ -204,7 +204,7 @@ pub trait HookImpl {
 ///     type HookTrait = dyn FormatterFunctions;
 /// }
 /// ```
-pub trait ExtensionPoint: 'static {
+pub trait ExtensionPoint: Eq + Ord + 'static {
     /// The trait that hooks implement for this extension point
     type HookTrait: ?Sized + Send + Sync + 'static;
 
@@ -281,7 +281,7 @@ pub trait ExtensionPoint: 'static {
 /// }
 ///
 /// // Create a hook with the logger implementation
-/// let hook = Hook::<Logger>::new(Box::new(ConsoleLogger));
+/// let hook = Hook::<Logger>::new(Box::new(ConsoleLogger), "myhook");
 ///
 /// // Use the hook
 /// hook.inner().log("Hello from hook!");
@@ -292,6 +292,26 @@ pub struct Hook<E: ExtensionPoint> {
     inner: Box<E::HookTrait>,
     hook_t: PhantomData<E::HookTrait>,
     name: &'static str,
+}
+
+impl<E: ExtensionPoint> PartialEq for Hook<E> {
+    fn eq(&self, other: &Self) -> bool {
+        self.hook_t == other.hook_t && self.name == other.name
+    }
+}
+
+impl<E: ExtensionPoint> Eq for Hook<E> {}
+
+impl<E: ExtensionPoint> PartialOrd for Hook<E> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<E: ExtensionPoint> Ord for Hook<E> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.name.cmp(other.name)
+    }
 }
 
 impl<E: ExtensionPoint> Hook<E> {
@@ -318,7 +338,7 @@ impl<E: ExtensionPoint> Hook<E> {
     ///     }
     /// }
     ///
-    /// let hook = Hook::<Validator>::new(Box::new(LengthValidator));
+    /// let hook = Hook::<Validator>::new(Box::new(LengthValidator), "myhook");
     /// ```
     #[must_use]
     pub fn new(hook: Box<E::HookTrait>, name: &'static str) -> Self {
@@ -348,7 +368,7 @@ impl<E: ExtensionPoint> Hook<E> {
     ///     }
     /// }
     ///
-    /// let hook = Hook::<Calculator>::new(Box::new(SimpleCalculator));
+    /// let hook = Hook::<Calculator>::new(Box::new(SimpleCalculator), "myhook");
     /// assert_eq!(hook.inner().add(2, 3), 5);
     /// ```
     #[must_use]
@@ -389,7 +409,7 @@ impl<E: ExtensionPoint> Hook<E> {
 /// }
 ///
 /// // Create a typed hook
-/// let hook = Hook::<Formatter>::new(Box::new(UppercaseFormatter));
+/// let hook = Hook::<Formatter>::new(Box::new(UppercaseFormatter), "myhook");
 ///
 /// // Create a type-erased hook
 /// let boxed_hook = BoxedHook::new(hook);
@@ -401,7 +421,28 @@ impl<E: ExtensionPoint> Hook<E> {
 pub struct BoxedHook {
     /// The actual hook trait object, type-erased
     hook: Box<dyn Any + Send + Sync>,
+    hook_name: &'static str,
     eid: ExtensionPointID,
+}
+
+impl PartialEq for BoxedHook {
+    fn eq(&self, other: &Self) -> bool {
+        self.name() == other.name()
+    }
+}
+
+impl Eq for BoxedHook {}
+
+impl PartialOrd for BoxedHook {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for BoxedHook {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.name().cmp(other.name())
+    }
 }
 
 impl BoxedHook {
@@ -432,12 +473,13 @@ impl BoxedHook {
     ///     }
     /// }
     ///
-    /// let hook = Hook::<Timer>::new(Box::new(SystemTimer));
+    /// let hook = Hook::<Timer>::new(Box::new(SystemTimer), "myhook");
     /// let boxed_hook = BoxedHook::new(hook);
     /// ```
     #[must_use]
     pub fn new<E: ExtensionPoint>(hook: Hook<E>) -> Self {
         BoxedHook {
+            hook_name: hook.name(),
             hook: Box::new(hook),
             eid: E::id(),
         }
@@ -471,7 +513,7 @@ impl BoxedHook {
     ///     }
     /// }
     ///
-    /// let hook = Hook::<Counter>::new(Box::new(SimpleCounter));
+    /// let hook = Hook::<Counter>::new(Box::new(SimpleCounter), "myhook");
     /// let boxed_hook = BoxedHook::new(hook);
     ///
     /// // Successful downcast
@@ -511,7 +553,7 @@ impl BoxedHook {
     ///     }
     /// }
     ///
-    /// let hook = Hook::<MyExt>::new(Box::new(MyImpl));
+    /// let hook = Hook::<MyExt>::new(Box::new(MyImpl), "myhook");
     /// let boxed_hook = BoxedHook::new(hook);
     ///
     /// assert_eq!(boxed_hook.eid(), MyExt::id());
@@ -519,6 +561,11 @@ impl BoxedHook {
     #[must_use]
     pub fn eid(&self) -> ExtensionPointID {
         self.eid
+    }
+
+    /// Get name of this hook
+    pub fn name(&self) -> &'static str {
+        self.hook_name
     }
 }
 
@@ -563,10 +610,10 @@ impl Debug for BoxedHook {
 /// // Create and register hooks
 /// let mut registry = HookRegistry::new();
 ///
-/// let min_hook = Hook::<Validator>::new(Box::new(MinLengthValidator));
+/// let min_hook = Hook::<Validator>::new(Box::new(MinLengthValidator), "minhook");
 /// let min_id = HookID::new("plugin1", Validator::id(), Some("min_length"));
 ///
-/// let max_hook = Hook::<Validator>::new(Box::new(MaxLengthValidator));
+/// let max_hook = Hook::<Validator>::new(Box::new(MaxLengthValidator), "maxhook");
 /// let max_id = HookID::new("plugin1", Validator::id(), Some("max_length"));
 ///
 /// registry.register(&min_id, min_hook).unwrap();
@@ -648,7 +695,7 @@ impl HookRegistry {
     /// }
     ///
     /// let mut registry = HookRegistry::new();
-    /// let hook = Hook::<Serializer>::new(Box::new(ByteSerializer));
+    /// let hook = Hook::<Serializer>::new(Box::new(ByteSerializer), "myhook");
     /// let id = HookID::new("byte_plugin", Serializer::id(), None);
     ///
     /// registry.register(&id, hook).unwrap();
@@ -697,7 +744,7 @@ impl HookRegistry {
     /// }
     ///
     /// let mut registry = HookRegistry::new();
-    /// let hook = Hook::<Parser>::new(Box::new(SimpleParser));
+    /// let hook = Hook::<Parser>::new(Box::new(SimpleParser), "myhook");
     /// let id = HookID::new("parser_plugin", Parser::id(), None);
     ///
     /// registry.register(&id, hook).unwrap();
@@ -745,7 +792,7 @@ impl HookRegistry {
     /// }
     ///
     /// let mut registry = HookRegistry::new();
-    /// let hook = Hook::<Handler>::new(Box::new(EchoHandler));
+    /// let hook = Hook::<Handler>::new(Box::new(EchoHandler), "myhook");
     /// let id = HookID::new("echo_plugin", Handler::id(), None);
     ///
     /// assert!(!registry.exists(&id));
@@ -790,7 +837,7 @@ impl HookRegistry {
     /// }
     ///
     /// let mut registry = HookRegistry::new();
-    /// let hook = Hook::<Encoder>::new(Box::new(Base64Encoder));
+    /// let hook = Hook::<Encoder>::new(Box::new(Base64Encoder), "myhook");
     /// let id = HookID::new("encoder_plugin", Encoder::id(), None);
     ///
     /// registry.register(&id, hook).unwrap();
@@ -839,7 +886,7 @@ impl HookRegistry {
     /// }
     ///
     /// let mut registry = HookRegistry::new();
-    /// let hook = Hook::<Hasher>::new(Box::new(SimpleHasher));
+    /// let hook = Hook::<Hasher>::new(Box::new(SimpleHasher), "myhook");
     /// let id = HookID::new("hasher_plugin", Hasher::id(), None);
     ///
     /// registry.register(&id, hook).unwrap();
@@ -894,10 +941,10 @@ impl HookRegistry {
     /// let mut registry = HookRegistry::new();
     /// let plugin_id = "json_plugin";
     ///
-    /// let formatter_hook = Hook::<Formatter>::new(Box::new(JsonFormatter));
+    /// let formatter_hook = Hook::<Formatter>::new(Box::new(JsonFormatter), "formathook");
     /// let formatter_id = HookID::new(plugin_id, Formatter::id(), None);
     ///
-    /// let parser_hook = Hook::<Parser>::new(Box::new(JsonParser));
+    /// let parser_hook = Hook::<Parser>::new(Box::new(JsonParser), "parsehook");
     /// let parser_id = HookID::new(plugin_id, Parser::id(), None);
     ///
     /// registry.register(&formatter_id, formatter_hook).unwrap();
@@ -947,10 +994,10 @@ impl HookRegistry {
     ///
     /// let mut registry = HookRegistry::new();
     ///
-    /// let console_hook = Hook::<Logger>::new(Box::new(ConsoleLogger));
+    /// let console_hook = Hook::<Logger>::new(Box::new(ConsoleLogger), "consoleh");
     /// let console_id = HookID::new("logger_plugin", Logger::id(), Some("console"));
     ///
-    /// let file_hook = Hook::<Logger>::new(Box::new(FileLogger));
+    /// let file_hook = Hook::<Logger>::new(Box::new(FileLogger), "fileh");
     /// let file_id = HookID::new("logger_plugin", Logger::id(), Some("file"));
     ///
     /// registry.register(&console_id, console_hook).unwrap();
@@ -968,12 +1015,15 @@ impl HookRegistry {
     where
         F: FnMut(&(&HookID, &BoxedHook)) -> bool,
     {
-        self.hooks
+        let mut v = self
+            .hooks
             .values()
             .flatten()
             .filter(f)
             .map(|(_id, hook)| hook)
-            .collect()
+            .collect::<Vec<_>>();
+        v.sort();
+        v
     }
 
     /// Gets all hooks for a specific [`ExtensionPoint`] type.
@@ -1012,18 +1062,21 @@ impl HookRegistry {
     ///
     /// let mut registry = HookRegistry::new();
     ///
-    /// let length_hook = Hook::<Validator>::new(Box::new(LengthValidator));
+    /// let length_hook = Hook::<Validator>::new(Box::new(LengthValidator), "lenh");
     /// let length_id = HookID::new("validator_plugin", Validator::id(), Some("length"));
     ///
-    /// let number_hook = Hook::<Validator>::new(Box::new(NumberValidator));
+    /// let number_hook = Hook::<Validator>::new(Box::new(NumberValidator), "numh");
     /// let number_id = HookID::new("validator_plugin", Validator::id(), Some("number"));
     ///
     /// registry.register(&length_id, length_hook).unwrap();
     /// registry.register(&number_id, number_hook).unwrap();
     ///
-    /// let validators = registry.get_by_extension_point::<Validator>();
+    /// dbg!(&registry);
+    /// let validators: Vec<&Hook<_>> = registry.get_by_extension_point::<Validator>();
     /// assert_eq!(validators.len(), 2);
-    /// validators.iter().for_each(|_|println!("{}",Validator::name()));
+    /// // if we want to actually know which is
+    /// //which, we can use the name method of the hook to get metadata
+    /// validators.iter().for_each(|v|{dbg!(v.name());});
     ///
     /// // Test the validators
     /// assert!(validators[0].inner().validate("123"));
@@ -1036,10 +1089,12 @@ impl HookRegistry {
         let Some(boxed_hooks) = self.hooks.get(&E::id()) else {
             return Vec::new();
         };
-        boxed_hooks
+        let mut v: Vec<&Hook<E>> = boxed_hooks
             .iter()
             .filter_map(|(_k, v)| v.downcast())
-            .collect()
+            .collect();
+        v.sort();
+        v
     }
 
     /// Deregisters all hooks for a specific [Plugin](crate::Plugin).
@@ -1079,10 +1134,10 @@ impl HookRegistry {
     /// let mut registry = HookRegistry::new();
     /// let plugin_id = "formatter_plugin";
     ///
-    /// let html_hook = Hook::<Formatter>::new(Box::new(HtmlFormatter));
+    /// let html_hook = Hook::<Formatter>::new(Box::new(HtmlFormatter), "htmlhook");
     /// let html_id = HookID::new(plugin_id, Formatter::id(), Some("html"));
     ///
-    /// let xml_hook = Hook::<Formatter>::new(Box::new(XmlFormatter));
+    /// let xml_hook = Hook::<Formatter>::new(Box::new(XmlFormatter), "xmlhook");
     /// let xml_id = HookID::new(plugin_id, Formatter::id(), Some("xml"));
     ///
     /// registry.register(&html_id, html_hook).unwrap();
