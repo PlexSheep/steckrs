@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/PlexSheep/steckrs/compare/v0.1.1...v0.1.2)
+
+### 📚 Documentation
+
+- Note that generics are difficult in the readme #7 - ([4a46a17](https://github.com/PlexSheep/steckrs/commit/4a46a177b4d08946b12bf94d12e600befe5d8090))
+- Set license to LGPL-3.0-or-later - ([e834db6](https://github.com/PlexSheep/steckrs/commit/e834db6905b7db72f0a8676099409d997a41fb4f))
+- Fix usages of macros in doc examples for changes to the macros - ([69cf19a](https://github.com/PlexSheep/steckrs/commit/69cf19a617477bcf94b3786fb2394a125da622f8))
+
+### ⚙️ Miscellaneous Tasks
+
+- Remove commented out example code - ([775d868](https://github.com/PlexSheep/steckrs/commit/775d868c7b913c2cc461b38538e9c09768922227))
+
+
 ## [0.1.1]
 
 ### ⛰️ Features
