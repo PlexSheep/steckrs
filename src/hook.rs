@@ -281,6 +281,7 @@ pub trait ExtensionPoint: 'static {
 /// // Use the hook
 /// hook.inner().log("Hello from hook!");
 /// ```
+#[derive(Debug)]
 pub struct Hook<E: ExtensionPoint> {
     /// The actual hook trait object
     inner: Box<E::HookTrait>,
@@ -439,7 +440,7 @@ impl BoxedHook {
     /// # Examples
     ///
     /// ```
-    /// use steckrs::{extension_point, hook::{BoxedHook, Hook}};
+    /// use steckrs::{extension_point, hook::{BoxedHook, Hook, ExtensionPoint}};
     ///
     /// extension_point!(
     ///     Counter: CounterTrait,
@@ -519,7 +520,7 @@ impl Debug for BoxedHook {
 /// # Examples
 ///
 /// ```
-/// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID}};
+/// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
 ///
 /// // Define extension points
 /// extension_point!(
@@ -615,7 +616,7 @@ impl HookRegistry {
     /// # Examples
     ///
     /// ```
-    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID}};
+    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
     ///     Serializer: SerializerTrait,
@@ -664,7 +665,7 @@ impl HookRegistry {
     /// # Examples
     ///
     /// ```
-    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID}};
+    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
     ///     Parser: ParserTrait,
@@ -712,7 +713,7 @@ impl HookRegistry {
     /// # Examples
     ///
     /// ```
-    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID}};
+    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
     ///     Handler: HandlerTrait,
@@ -757,7 +758,7 @@ impl HookRegistry {
     /// # Examples
     ///
     /// ```
-    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID}};
+    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
     ///     Encoder: EncoderTrait,
@@ -806,7 +807,7 @@ impl HookRegistry {
     /// # Examples
     ///
     /// ```
-    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID}};
+    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
     ///     Hasher: HasherTrait,
@@ -847,7 +848,7 @@ impl HookRegistry {
     /// # Examples
     ///
     /// ```
-    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID}};
+    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
     ///     Formatter: FormatterTrait,
@@ -906,7 +907,7 @@ impl HookRegistry {
     /// # Examples
     ///
     /// ```
-    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID}};
+    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
     ///     Logger: LoggerTrait,
@@ -971,7 +972,7 @@ impl HookRegistry {
     /// # Examples
     ///
     /// ```
-    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID}};
+    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
     ///     Validator: ValidatorTrait,
@@ -1005,12 +1006,13 @@ impl HookRegistry {
     ///
     /// let validators = registry.get_by_extension_point::<Validator>();
     /// assert_eq!(validators.len(), 2);
+    /// validators.iter().for_each(|_|println!("{}",Validator::name()));
     ///
     /// // Test the validators
     /// assert!(validators[0].inner().validate("123"));
     /// assert!(validators[1].inner().validate("123"));
-    /// assert!(validators[0].inner().validate("abc"));
-    /// assert!(!validators[1].inner().validate("abc"));
+    /// assert!(validators[1].inner().validate("abc"));
+    /// assert!(!validators[0].inner().validate("abc"));
     /// ```
     #[must_use]
     pub fn get_by_extension_point<E: ExtensionPoint>(&self) -> Vec<&Hook<E>> {
@@ -1036,7 +1038,7 @@ impl HookRegistry {
     /// # Examples
     ///
     /// ```
-    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID}};
+    /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
     ///     Formatter: FormatterTrait,
