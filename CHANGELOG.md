@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/PlexSheep/steckrs/compare/v0.1.1...v0.1.2) - 2025-03-10
+
+### <!-- 3 -->📚 Documentation
+
+- note that generics are difficult in the readme #7
+- set license to LGPL-3.0-or-later
+- fix usages of macros in doc examples for changes to the macros
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- try to fix release-plz
+- super small change to trigger the ci/cd
+- remove commented out example code
+
 ## [0.1.1]
 
 ### ⛰️ Features
