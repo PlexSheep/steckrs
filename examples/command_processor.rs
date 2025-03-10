@@ -9,13 +9,19 @@ struct CommandProcessor {
 
 // Define the points where plugins can be called
 extension_point!(
-    CommandHandler /* the extension point */: CommandHandlerFunctions /* which functions the point has */,
-    fn can_handle(&self /* self is always needed */ , command: &str) -> bool,
-    fn handle(&self, command: &str, args: &[&str]) -> String,
+    /// The extension point
+    CommandHandler:
+    /// The trait implemented by the extension point
+    CommandHandlerFunctions;
+    /// document like this
+    ///
+    /// self is always needed
+    fn can_handle(&self , command: &str) -> bool;
+    fn handle(&self, command: &str, args: &[&str]) -> String;
 );
 extension_point!(
-    ByeExtPoint: ByeExtPointF,
-    fn say_bye(&self) -> String,
+    ByeExtPoint: ByeExtPointF;
+    fn say_bye(&self) -> String;
 );
 
 impl CommandProcessor {
@@ -72,12 +78,14 @@ impl CommandProcessor {
     }
 }
 
-// Create a core plugin with basic functionality
-//
-// If you need a more complex struct for your plugin, please implement the Plugin trait
-// yourself. With some clever design, this might even allow you to use the plugin datatype to
-// run hooks directly, giving you access to your data.
 simple_plugin!(
+    /// Create a core plugin with basic functionality
+    ///
+    /// If you need a more complex struct for your plugin, please implement the Plugin trait
+    /// yourself. With some clever design, this might even allow you to use the plugin datatype to
+    /// run hooks directly, giving you access to your data.
+    ///
+    /// BTW, this is how you can document the plugin
     CorePlugin,                                // Datatype Identifier in source code
     "core_plugin",                             // PluginID
     "Core commands for the command processor", // Description

@@ -21,7 +21,9 @@
 ///
 /// # Parameters
 ///
+/// - `$name_meta`: Attributes for the extension point, like documentation and derives
 /// - `$name`: The name of the extension point struct
+/// - `$trait_meta`: Attributes for the trait, like documentation and derives
 /// - `$trait_name`: The name of the trait that hooks will implement
 /// - `$($fn_sig:tt)*`: The function signatures for the trait
 ///
@@ -33,15 +35,19 @@
 ///
 /// // Define an extension point with a single method
 /// extension_point!(
-///     Logger: LoggerTrait, // Name of EP, Name of it's trait
-///     fn log(&self, message: &str), // the methods the trait of the EP implements
+///     Logger: LoggerTrait; // Name of EP, Name of it's trait
+///     fn log(&self, message: &str); // the methods the trait of the EP implements
 /// );
 ///
 /// // Define an extension point with multiple methods
 /// extension_point!(
-///     Formatter: FormatterTrait,
-///     fn format(&self, text: &str) -> String,
-///     fn supports_format(&self, format_name: &str) -> bool,
+///     /// struct documentation for Formatter
+///     Formatter:
+///     /// trait documentation for FormatterTrait
+///     FormatterTrait;
+///     /// Function documentation for format
+///     fn format(&self, text: &str) -> String;
+///     fn supports_format(&self, format_name: &str) -> bool;
 /// );
 ///
 /// // Implement the trait for a concrete type
@@ -58,31 +64,21 @@
 /// ```
 #[macro_export]
 macro_rules! extension_point {
-    ($name:ident: $trait_name:ident,
-        $(fn $method_name:ident(&$self_param:tt $(, $param_name:ident: $param_type:ty)*) -> $return_type:ty),* $(,)?
+    (
+    $(#[$name_meta:meta])*
+    $name:ident:
+    $(#[$trait_meta:meta])*
+    $trait_name:ident;
+        $($trait_item:tt)*
     ) => {
+        $(#[$trait_meta])*
         pub trait $trait_name: Send + Sync  {
             $(
-                fn $method_name(&$self_param $(, $param_name: $param_type)*) -> $return_type;
+                $trait_item
             )*
         }
 
-        #[derive(Debug, Ord, Eq, PartialEq, PartialOrd, Copy, Clone, Hash)]
-        pub struct $name;
-
-        impl $crate::hook::ExtensionPoint for $name {
-            type HookTrait = dyn $trait_name;
-        }
-    };
-    ($name:ident: $trait_name:ident,
-        $(fn $method_name:ident(&$self_param:tt $(, $param_name:ident: $param_type:ty)*)),* $(,)?
-    ) => {
-        pub trait $trait_name: Send + Sync {
-            $(
-                fn $method_name(&$self_param $(, $param_name: $param_type)*);
-            )*
-        }
-
+        $(#[$name_meta])*
         #[derive(Debug, Ord, Eq, PartialEq, PartialOrd, Copy, Clone, Hash)]
         pub struct $name;
 
@@ -102,6 +98,7 @@ macro_rules! extension_point {
 ///
 /// # Parameters
 ///
+/// - `$plugin_meta`: Attributes for the plugin, like documentation and derives
 /// - `$name`: The name of the plugin struct
 /// - `$id`: The unique ID of the plugin (as a string literal)
 /// - `$description`: A description of the plugin (as a string literal)
@@ -160,6 +157,7 @@ macro_rules! extension_point {
 /// }
 ///
 /// simple_plugin!(
+///     /// Document your plugin like this if you want
 ///     GreetingPlugin,
 ///     "greeting_plugin",
 ///     "A plugin with multiple greeting implementations",
@@ -176,15 +174,22 @@ macro_rules! extension_point {
 /// The generated [`register_hooks`](crate::Plugin::register_hooks) method may panic if hook registration fails.
 #[macro_export]
 macro_rules! simple_plugin {
-        ($plugin_name:ident, $plugin_id:expr, $description:expr,
-     hooks: [$(($extension_point:ident, $hook_impl:ident $(, $discrim:expr)?)),* $(,)?]) => {
+        (
+        $(#[$plugin_meta:meta])*
+        $plugin_name:ident,
+        $plugin_id:expr,
+        $description:expr,
+        hooks: [$(($extension_point:ident, $hook_impl:ident $(, $discrim:expr)?)),* $(,)?]) => {
+        $(#[$plugin_meta])*
         #[derive(Debug)]
         pub struct $plugin_name {
             enabled: bool,
         }
 
         impl $plugin_name {
+            #[doc = concat!("ID of ", stringify!($plugin_name))]
             pub const ID: $crate::PluginID = $plugin_id;
+            #[doc = concat!("Description of ", stringify!($plugin_name))]
             pub const DESCRIPTION: &'static str = $description;
 
             pub fn new() -> Self {
