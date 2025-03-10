@@ -241,7 +241,7 @@ pub trait Plugin: Any + Send + Sync + Debug {
     ///
     /// # Errors
     ///
-    /// Returns a [`PluginError`](error::PluginError) if loading fails.
+    /// Returns a [`PluginError`] if loading fails.
     fn on_load(&mut self) -> PluginResult<()> {
         Ok(())
     }
@@ -252,7 +252,7 @@ pub trait Plugin: Any + Send + Sync + Debug {
     ///
     /// # Errors
     ///
-    /// Returns a [`PluginError`](error::PluginError) if the unloading cleanup fails.
+    /// Returns a [`PluginError`] if the unloading cleanup fails.
     fn on_unload(&mut self) -> PluginResult<()> {
         Ok(())
     }

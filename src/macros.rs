@@ -5,9 +5,9 @@
 //!
 //! ## Overview
 //!
-//! - [`extension_point!`]: Defines a new extension point and its associated trait
-//! - [`simple_plugin!`]: Creates a simple plugin implementation with minimal boilerplate
-//! - [`register_hook!`]: Registers a hook with a hook registry
+//! - [`extension_point!`](crate::extension_point): Defines a new extension point and its associated trait
+//! - [`simple_plugin!`](crate::simple_plugin): Creates a simple plugin implementation with minimal boilerplate
+//! - [`register_hook!`](crate::register_hook): Registers a hook with a hook registry
 //!
 //! These macros reduce the amount of boilerplate code needed to work with the
 //! steckrs plugin system, making it easier to define and use plugins.

@@ -17,7 +17,7 @@
 //!
 //! This module also provides type aliases for commonly used Result types:
 //!
-//! - [`PluginResult<T>]`: Results from plugin operations
+//! - [`PluginResult<T>`]: Results from plugin operations
 //! - [`HookResult<T>`]: Results from hook operations
 
 use crate::PluginID;
