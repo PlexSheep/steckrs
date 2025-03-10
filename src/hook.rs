@@ -570,6 +570,7 @@ impl BoxedHook {
     }
 
     /// Get name of this hook
+    #[must_use]
     pub fn name(&self) -> &'static str {
         self.hook_name
     }
