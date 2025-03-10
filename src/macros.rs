@@ -53,7 +53,7 @@
 /// }
 ///
 ///
-/// let hook = Hook::<Logger>::new(Box::new(ConsoleLogger));
+/// let hook = Hook::<Logger>::new(Box::new(ConsoleLogger), "myhook");
 /// hook.inner().log("Hello from hook!");
 /// ```
 #[macro_export]
@@ -61,7 +61,7 @@ macro_rules! extension_point {
     ($name:ident: $trait_name:ident,
         $(fn $method_name:ident(&$self_param:tt $(, $param_name:ident: $param_type:ty)*) -> $return_type:ty),* $(,)?
     ) => {
-        pub trait $trait_name: Send + Sync {
+        pub trait $trait_name: Send + Sync  {
             $(
                 fn $method_name(&$self_param $(, $param_name: $param_type)*) -> $return_type;
             )*
@@ -289,7 +289,10 @@ macro_rules! register_hook {
                     <$extension_point as $crate::hook::ExtensionPoint>::id(),
                     None,
                 ),
-                $crate::hook::Hook::<$extension_point>::new(Box::new($hook)),
+                $crate::hook::Hook::<$extension_point>::new(
+                    Box::new($hook),
+                    std::any::type_name::<$hook>(),
+                ),
             )
             .expect("could not register hook")
     };
@@ -301,7 +304,10 @@ macro_rules! register_hook {
                     <$extension_point as $crate::hook::ExtensionPoint>::id(),
                     Some($discriminator),
                 ),
-                $crate::hook::Hook::<$extension_point>::new(Box::new($hook)),
+                $crate::hook::Hook::<$extension_point>::new(
+                    Box::new($hook),
+                    std::any::type_name::<$hook>(),
+                ),
             )
             .expect("could not register hook")
     };

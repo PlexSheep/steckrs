@@ -59,6 +59,7 @@
 use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use crate::error::{HookError, HookResult};
 use crate::PluginID;
@@ -155,6 +156,10 @@ impl HookID {
             discriminator: discriminator.map(std::convert::Into::into),
         }
     }
+}
+
+pub trait HookImpl {
+    fn name(&self) -> &'static str;
 }
 
 /// Defines an extension point where plugins can hook into the application.
@@ -285,6 +290,8 @@ pub trait ExtensionPoint: 'static {
 pub struct Hook<E: ExtensionPoint> {
     /// The actual hook trait object
     inner: Box<E::HookTrait>,
+    hook_t: PhantomData<E::HookTrait>,
+    name: &'static str,
 }
 
 impl<E: ExtensionPoint> Hook<E> {
@@ -314,8 +321,12 @@ impl<E: ExtensionPoint> Hook<E> {
     /// let hook = Hook::<Validator>::new(Box::new(LengthValidator));
     /// ```
     #[must_use]
-    pub fn new(hook: Box<E::HookTrait>) -> Self {
-        Hook { inner: hook }
+    pub fn new(hook: Box<E::HookTrait>, name: &'static str) -> Self {
+        Hook {
+            inner: hook,
+            hook_t: PhantomData,
+            name,
+        }
     }
 
     /// Returns a reference to the inner trait implementation.
@@ -343,6 +354,12 @@ impl<E: ExtensionPoint> Hook<E> {
     #[must_use]
     pub fn inner(&self) -> &E::HookTrait {
         &self.inner
+    }
+
+    /// Get the human readable name for this hook
+    #[must_use]
+    pub fn name(&self) -> &'static str {
+        self.name
     }
 }
 
