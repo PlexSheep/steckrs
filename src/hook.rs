@@ -24,8 +24,8 @@
 //!
 //! // Define an extension point
 //! extension_point!(
-//!     Greeter: GreeterTrait,
-//!     fn greet(&self, name: &str) -> String,
+//!     Greeter: GreeterTrait;
+//!     fn greet(&self, name: &str) -> String;
 //! );
 //!
 //! // Implement the extension point
@@ -177,9 +177,9 @@ impl HookID {
 /// use steckrs::extension_point;
 ///
 /// extension_point!(
-///     ConfigLoader: ConfigLoaderTrait,
-///     fn load_config(&self, path: &str) -> Result<String, String>,
-///     fn supports_format(&self, format: &str) -> bool,
+///     ConfigLoader: ConfigLoaderTrait;
+///     fn load_config(&self, path: &str) -> Result<String, String>;
+///     fn supports_format(&self, format: &str) -> bool;
 /// );
 ///
 /// // Now `ConfigLoader` is an extension point that plugins can implement
@@ -270,8 +270,8 @@ pub trait ExtensionPoint: Eq + Ord + 'static {
 /// use steckrs::{extension_point, hook::Hook};
 ///
 /// extension_point!(
-///     Logger: LoggerTrait,
-///     fn log(&self, message: &str),
+///     Logger: LoggerTrait;
+///     fn log(&self, message: &str);
 /// );
 ///
 /// struct ConsoleLogger;
@@ -328,8 +328,8 @@ impl<E: ExtensionPoint> Hook<E> {
     /// use steckrs::{extension_point, hook::Hook};
     ///
     /// extension_point!(
-    ///     Validator: ValidatorTrait,
-    ///     fn validate(&self, input: &str) -> bool,
+    ///     Validator: ValidatorTrait;
+    ///     fn validate(&self, input: &str) -> bool;
     /// );
     ///
     /// struct LengthValidator;
@@ -358,8 +358,8 @@ impl<E: ExtensionPoint> Hook<E> {
     /// use steckrs::{extension_point, hook::Hook};
     ///
     /// extension_point!(
-    ///     Calculator: CalculatorTrait,
-    ///     fn add(&self, a: i32, b: i32) -> i32,
+    ///     Calculator: CalculatorTrait;
+    ///     fn add(&self, a: i32, b: i32) -> i32;
     /// );
     ///
     /// struct SimpleCalculator;
@@ -398,8 +398,8 @@ impl<E: ExtensionPoint> Hook<E> {
 /// use steckrs::{extension_point, hook::{BoxedHook, Hook}};
 ///
 /// extension_point!(
-///     Formatter: FormatterTrait,
-///     fn format(&self, text: &str) -> String,
+///     Formatter: FormatterTrait;
+///     fn format(&self, text: &str) -> String;
 /// );
 ///
 /// struct UppercaseFormatter;
@@ -463,8 +463,8 @@ impl BoxedHook {
     /// use steckrs::{extension_point, hook::{BoxedHook, Hook}};
     ///
     /// extension_point!(
-    ///     Timer: TimerTrait,
-    ///     fn get_time(&self) -> u64,
+    ///     Timer: TimerTrait;
+    ///     fn get_time(&self) -> u64;
     /// );
     ///
     /// struct SystemTimer;
@@ -503,8 +503,8 @@ impl BoxedHook {
     /// use steckrs::{extension_point, hook::{BoxedHook, Hook, ExtensionPoint}};
     ///
     /// extension_point!(
-    ///     Counter: CounterTrait,
-    ///     fn count(&self) -> i32,
+    ///     Counter: CounterTrait;
+    ///     fn count(&self) -> i32;
     /// );
     ///
     /// struct SimpleCounter;
@@ -544,8 +544,8 @@ impl BoxedHook {
     /// use steckrs::{extension_point, hook::{BoxedHook, Hook, ExtensionPoint}};
     ///
     /// extension_point!(
-    ///     MyExt: MyExtTrait,
-    ///     fn do_something(&self) -> bool,
+    ///     MyExt: MyExtTrait;
+    ///     fn do_something(&self) -> bool;
     /// );
     ///
     /// struct MyImpl;
@@ -591,8 +591,8 @@ impl Debug for BoxedHook {
 ///
 /// // Define extension points
 /// extension_point!(
-///     Validator: ValidatorTrait,
-///     fn validate(&self, input: &str) -> bool,
+///     Validator: ValidatorTrait;
+///     fn validate(&self, input: &str) -> bool;
 /// );
 ///
 /// // Implement extension points
@@ -689,8 +689,8 @@ impl HookRegistry {
     /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
-    ///     Serializer: SerializerTrait,
-    ///     fn serialize(&self, data: &str) -> Vec<u8>,
+    ///     Serializer: SerializerTrait;
+    ///     fn serialize(&self, data: &str) -> Vec<u8>;
     /// );
     ///
     /// struct ByteSerializer;
@@ -738,8 +738,8 @@ impl HookRegistry {
     /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
-    ///     Parser: ParserTrait,
-    ///     fn parse(&self, input: &str) -> bool,
+    ///     Parser: ParserTrait;
+    ///     fn parse(&self, input: &str) -> bool;
     /// );
     ///
     /// struct SimpleParser;
@@ -786,8 +786,8 @@ impl HookRegistry {
     /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
-    ///     Handler: HandlerTrait,
-    ///     fn handle(&self, input: &str) -> String,
+    ///     Handler: HandlerTrait;
+    ///     fn handle(&self, input: &str) -> String;
     /// );
     ///
     /// struct EchoHandler;
@@ -831,8 +831,8 @@ impl HookRegistry {
     /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
-    ///     Encoder: EncoderTrait,
-    ///     fn encode(&self, input: &str) -> Vec<u8>,
+    ///     Encoder: EncoderTrait;
+    ///     fn encode(&self, input: &str) -> Vec<u8>;
     /// );
     ///
     /// struct Base64Encoder;
@@ -880,8 +880,8 @@ impl HookRegistry {
     /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
-    ///     Hasher: HasherTrait,
-    ///     fn hash(&self, input: &str) -> u64,
+    ///     Hasher: HasherTrait;
+    ///     fn hash(&self, input: &str) -> u64;
     /// );
     ///
     /// struct SimpleHasher;
@@ -921,13 +921,13 @@ impl HookRegistry {
     /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
-    ///     Formatter: FormatterTrait,
-    ///     fn format(&self, input: &str) -> String,
+    ///     Formatter: FormatterTrait;
+    ///     fn format(&self, input: &str) -> String;
     /// );
     ///
     /// extension_point!(
-    ///     Parser: ParserTrait,
-    ///     fn parse(&self, input: &str) -> bool,
+    ///     Parser: ParserTrait;
+    ///     fn parse(&self, input: &str) -> bool;
     /// );
     ///
     /// struct JsonFormatter;
@@ -980,8 +980,8 @@ impl HookRegistry {
     /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
-    ///     Logger: LoggerTrait,
-    ///     fn log(&self, level: &str, message: &str),
+    ///     Logger: LoggerTrait;
+    ///     fn log(&self, level: &str, message: &str);
     /// );
     ///
     /// struct ConsoleLogger;
@@ -1048,8 +1048,8 @@ impl HookRegistry {
     /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
-    ///     Validator: ValidatorTrait,
-    ///     fn validate(&self, input: &str) -> bool,
+    ///     Validator: ValidatorTrait;
+    ///     fn validate(&self, input: &str) -> bool;
     /// );
     ///
     /// struct LengthValidator;
@@ -1120,8 +1120,8 @@ impl HookRegistry {
     /// use steckrs::{extension_point, hook::{HookRegistry, Hook, HookID, ExtensionPoint}};
     ///
     /// extension_point!(
-    ///     Formatter: FormatterTrait,
-    ///     fn format(&self, input: &str) -> String,
+    ///     Formatter: FormatterTrait;
+    ///     fn format(&self, input: &str) -> String;
     /// );
     ///
     /// struct HtmlFormatter;
