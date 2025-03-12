@@ -126,7 +126,7 @@ Extension points define interfaces where plugins can add functionality. Each ext
 
 ### Plugins
 
-Plugins are self-contained datastructures that implement functionality for extension points. Each plugin:
+Plugins are self-contained data structures that implement functionality for extension points. Each plugin:
 - Has a unique identifier
 - Can be enabled or disabled at runtime
 - Can register multiple hooks to different extension points
