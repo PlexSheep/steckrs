@@ -124,7 +124,7 @@ pub mod macros;
 use tracing::{error, warn};
 
 use self::error::{PluginError, PluginResult};
-use self::hook::HookRegistry;
+use self::hook::{ExtensionPoint, HookRegistry};
 
 /// Plugin identifier type.
 ///
@@ -707,5 +707,21 @@ impl PluginManager {
             }
             None => Err(error::PluginError::NotFound(id)),
         }
+    }
+
+    pub fn get_enabled_hooks_by_ep<E: ExtensionPoint>(
+        &self,
+    ) -> Vec<(&hook::HookID, &hook::Hook<E>)> {
+        self.hook_registry()
+            .get_by_extension_point()
+            .into_iter()
+            .filter(|(id, _hook)| {
+                if let Some(plugin) = self.plugins.get(id.plugin_id) {
+                    plugin.is_enabled()
+                } else {
+                    false
+                }
+            })
+            .collect()
     }
 }

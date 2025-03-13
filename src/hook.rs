@@ -104,7 +104,7 @@ pub type ExtensionPointID = std::any::TypeId;
 ///     Some("variant1"),
 /// );
 /// ```
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct HookID {
     /// Plugin that owns this hook
     pub plugin_id: PluginID,
@@ -761,9 +761,9 @@ impl HookRegistry {
     /// assert!(!registry.exists(&id));
     /// ```
     pub fn deregister(&mut self, id: &HookID) -> Option<BoxedHook> {
-        let hook = self.get_by_id(id)?;
-        if let Some(h) = self.hooks.get_mut(&hook.eid()) {
-            h.remove(id)
+        let id = self.get_by_id(id)?.0.clone();
+        if let Some(h) = self.hooks.get_mut(&id.extension_point_id) {
+            h.remove(&id)
         } else {
             None
         }
@@ -901,7 +901,7 @@ impl HookRegistry {
     /// assert!(retrieved.is_some());
     /// ```
     #[must_use]
-    pub fn get_by_id(&self, id: &HookID) -> Option<&BoxedHook> {
+    pub fn get_by_id(&self, id: &HookID) -> Option<(&HookID, &BoxedHook)> {
         self.get_by_filter(|(hid, _)| *hid == id).first().copied()
     }
 
@@ -960,7 +960,7 @@ impl HookRegistry {
     /// assert_eq!(plugin_hooks.len(), 2);
     /// ```
     #[must_use]
-    pub fn get_by_plugin(&self, plugin_id: PluginID) -> Vec<&BoxedHook> {
+    pub fn get_by_plugin(&self, plugin_id: PluginID) -> Vec<(&HookID, &BoxedHook)> {
         self.get_by_filter(|(id, _)| id.plugin_id == plugin_id)
     }
 
@@ -1017,17 +1017,11 @@ impl HookRegistry {
     /// assert_eq!(file_loggers.len(), 1);
     /// ```
     #[must_use]
-    pub fn get_by_filter<F>(&self, f: F) -> Vec<&BoxedHook>
+    pub fn get_by_filter<F>(&self, f: F) -> Vec<(&HookID, &BoxedHook)>
     where
         F: FnMut(&(&HookID, &BoxedHook)) -> bool,
     {
-        let mut v = self
-            .hooks
-            .values()
-            .flatten()
-            .filter(f)
-            .map(|(_id, hook)| hook)
-            .collect::<Vec<_>>();
+        let mut v = self.hooks.values().flatten().filter(f).collect::<Vec<_>>();
         v.sort();
         v
     }
@@ -1092,13 +1086,19 @@ impl HookRegistry {
     /// assert!(!validators[1].inner().validate("abc"));
     /// ```
     #[must_use]
-    pub fn get_by_extension_point<E: ExtensionPoint>(&self) -> Vec<&Hook<E>> {
+    pub fn get_by_extension_point<E: ExtensionPoint>(&self) -> Vec<(&HookID, &Hook<E>)> {
         let Some(boxed_hooks) = self.hooks.get(&E::id()) else {
             return Vec::new();
         };
-        let mut v: Vec<&Hook<E>> = boxed_hooks
+        let mut v: Vec<(&HookID, &Hook<E>)> = boxed_hooks
             .iter()
-            .filter_map(|(_k, v)| v.downcast())
+            .filter_map(|(k, v)| {
+                if let Some(hook) = v.downcast() {
+                    Some((k, hook))
+                } else {
+                    None
+                }
+            })
             .collect();
         v.sort();
         v
