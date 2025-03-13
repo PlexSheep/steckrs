@@ -22,7 +22,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run tests
-        run: cargo test --all-features --workspace --all-targets
+        run: cargo test --all-features --workspace
 
   clippy:
     permissions:
@@ -40,13 +40,13 @@ jobs:
           components: clippy,rustfmt
       - uses: Swatinem/rust-cache@v2
       - name: Clippy check and fix
-        run: cargo clippy --fix --all-targets --all-features --workspace
+        run: cargo clippy --fix --all-features --workspace
       - name: Check formatting
         run: cargo fmt --all
       - name: commit back to repository
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          # These defaults somehow do not work for me, so I've set them 
+          # These defaults somehow do not work for me, so I've set them
           # explicitly
           # The big number is the userid of the bot
           commit_user_name: github-actions[bot]
