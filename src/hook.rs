@@ -1092,13 +1092,7 @@ impl HookRegistry {
         };
         let mut v: Vec<(&HookID, &Hook<E>)> = boxed_hooks
             .iter()
-            .filter_map(|(k, v)| {
-                if let Some(hook) = v.downcast() {
-                    Some((k, hook))
-                } else {
-                    None
-                }
-            })
+            .filter_map(|(k, v)| v.downcast().map(|hook| (k, hook)))
             .collect();
         v.sort();
         v

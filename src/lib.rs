@@ -709,6 +709,7 @@ impl PluginManager {
         }
     }
 
+    #[must_use]
     pub fn get_enabled_hooks_by_ep<E: ExtensionPoint>(
         &self,
     ) -> Vec<(&hook::HookID, &hook::Hook<E>)> {
