@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/PlexSheep/steckrs/compare/v0.3.0...v0.3.1)
+
+### 📚 Documentation
+
+- The readme example was outdated again - ([81bb6b2](https://github.com/PlexSheep/steckrs/commit/81bb6b2b59780afce8b2dac906076ea27d1a363c))
+
+
 ## [0.3.0](https://github.com/PlexSheep/steckrs/compare/v0.2.0...v0.3.0)
 
 ### 🚜 Refactor
