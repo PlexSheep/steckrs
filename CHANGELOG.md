@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.3.0](https://github.com/PlexSheep/steckrs/compare/v0.2.0...v0.3.0)
+
+### 🚜 Refactor
+
+- [**breaking**] Return both hook and hook id - ([a62768f](https://github.com/PlexSheep/steckrs/commit/a62768f9de3e89d8554dab4075802e1681bd9f6a))
+
+### 📚 Documentation
+
+- Fix docs examples as the id was added, docs for new function - ([fc23fa0](https://github.com/PlexSheep/steckrs/commit/fc23fa05e8445659460db42fe986f4cda537dead))
+- Fix examples - ([f679e3f](https://github.com/PlexSheep/steckrs/commit/f679e3ffe873aadb3227f53a0d1ea60cd91ef802))
+- Typo in readme - ([70a0dbb](https://github.com/PlexSheep/steckrs/commit/70a0dbbac0da00f00ccd3fceb59f5c14cf762d48))
+- License note in readme had the wrong license - ([eaab58a](https://github.com/PlexSheep/steckrs/commit/eaab58acd63d33880d0ae3844d640e9150353dfc))
+- Example in readme was outdated - ([6261d4c](https://github.com/PlexSheep/steckrs/commit/6261d4cce46fe7efa511cd13e24d16206cb9d699))
+
+### ⚙️ Miscellaneous Tasks
+
+- Automatic Rust CI changes - ([f34d9cd](https://github.com/PlexSheep/steckrs/commit/f34d9cde47ac0411c20992f24dd2b0c575eb566c))
+
+
 ## [0.2.0](https://github.com/PlexSheep/steckrs/compare/v0.1.1...v0.2.0)
 
 ### 🚀 Features
