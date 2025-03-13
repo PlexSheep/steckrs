@@ -40,11 +40,12 @@ impl CommandProcessor {
         let command = parts[0];
         let args = &parts[1..];
 
-        // Find a handler that can process this command
-        let registry = self.plugin_manager.hook_registry();
-        let hooks = registry.get_by_extension_point::<CommandHandler>();
+        // Get all enabled hooks (plugins could be disabled)
+        let hooks = self
+            .plugin_manager
+            .get_enabled_hooks_by_ep::<CommandHandler>();
 
-        for hook in hooks {
+        for (_id, hook) in hooks {
             // NOTE: first come first serve
             if hook.inner().can_handle(command) {
                 return hook.inner().handle(command, args);
@@ -69,10 +70,9 @@ impl CommandProcessor {
     }
 
     fn end(&self) {
-        let registry = self.plugin_manager.hook_registry();
-        let hooks = registry.get_by_extension_point::<ByeExtPoint>();
+        let hooks = self.plugin_manager.get_enabled_hooks_by_ep::<ByeExtPoint>();
 
-        for hook in hooks {
+        for (_id, hook) in hooks {
             println!("{}", hook.inner().say_bye())
         }
     }

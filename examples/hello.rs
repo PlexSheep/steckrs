@@ -36,12 +36,11 @@ fn main() {
         .unwrap();
     plugin_manager.enable_plugin(HelloPlugin::ID).unwrap();
 
-    // Use the plugin
-    let registry = plugin_manager.hook_registry();
-    let hooks = registry.get_by_extension_point::<GreeterExtension>();
+    // Get all enabled hooks (plugins could be disabled)
+    let hooks = plugin_manager.get_enabled_hooks_by_ep::<GreeterExtension>();
 
     // Execute all hooks relevant for this extension point
-    for hook in hooks {
+    for (_id, hook) in hooks {
         println!("{}", hook.inner().greet("World"));
     }
 }
