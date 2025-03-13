@@ -282,7 +282,7 @@ macro_rules! simple_plugin {
 /// // Use the registered hook
 /// let hooks = registry.get_by_extension_point::<Calculator>();
 /// assert_eq!(hooks.len(), 1);
-/// assert_eq!(hooks[0].inner().add(2, 3), 5);
+/// assert_eq!(hooks[0].1.inner().add(2, 3), 5);
 /// ```
 #[macro_export]
 macro_rules! register_hook {

@@ -78,12 +78,11 @@
 //! plugin_manager.load_plugin(Box::new(HelloPlugin::new())).unwrap();
 //! plugin_manager.enable_plugin(HelloPlugin::ID).unwrap();
 //!
-//! // Use the plugin
-//! let registry = plugin_manager.hook_registry();
-//! let hooks = registry.get_by_extension_point::<GreeterExtension>();
+//! // Get all enabled hooks (plugins could be disabled)
+//! let hooks = plugin_manager.get_enabled_hooks_by_ep::<GreeterExtension>();
 //!
 //! // execute all hooks relevant for this extension point
-//! for hook in hooks {
+//! for (_id, hook) in hooks {
 //!     println!("{}", hook.inner().greet("World"));
 //! }
 //! ```
@@ -300,9 +299,9 @@ pub trait Plugin: Any + Send + Sync + Debug {
 /// manager.enable_plugin(ExamplePlugin::ID).unwrap();
 ///
 /// // Use plugin hooks
-/// let registry = manager.hook_registry();
-/// let hooks = registry.get_by_extension_point::<ExampleExt>();
-/// for hook in hooks {
+/// // Get all enabled hooks (plugins could be disabled)
+/// let hooks = manager.get_enabled_hooks_by_ep::<ExampleExt>();
+/// for (_id, hook) in hooks {
 ///     assert_eq!(hook.inner().do_something(), "I did something!");
 /// }
 /// ```
@@ -709,6 +708,58 @@ impl PluginManager {
         }
     }
 
+    /// Gets all hooks of enabled [Plugins](Plugin) for a specific [`ExtensionPoint`] type.
+    ///
+    /// This method filters hooks by both extension point type and plugin enabled status,
+    /// returning only hooks from enabled plugins.
+    ///
+    /// # Type Parameters
+    ///
+    /// - `E`: The [`ExtensionPoint`] type
+    ///
+    /// # Returns
+    ///
+    /// A vector of tuples containing references to [`HookID`](crate::hook::HookID)s and hooks registered for the [`ExtensionPoint`]
+    /// from enabled plugins.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::{extension_point, simple_plugin, PluginManager};
+    ///
+    /// extension_point!(
+    ///     Logger: LoggerTrait;
+    ///     fn log(&self, message: &str);
+    /// );
+    ///
+    /// struct ConsoleLogger;
+    /// impl LoggerTrait for ConsoleLogger {
+    ///     fn log(&self, message: &str) {
+    ///         // In a real implementation, this would print to console
+    ///     }
+    /// }
+    ///
+    /// simple_plugin!(
+    ///     LoggerPlugin,
+    ///     "logger_plugin",
+    ///     "Basic logging plugin",
+    ///     hooks: [(Logger, ConsoleLogger)]
+    /// );
+    ///
+    /// let mut manager = PluginManager::new();
+    /// manager.load_plugin(Box::new(LoggerPlugin::new())).unwrap();
+    /// manager.enable_plugin(LoggerPlugin::ID).unwrap();
+    ///
+    /// // Get all enabled hooks for the Logger extension point
+    /// let hooks = manager.get_enabled_hooks_by_ep::<Logger>();
+    /// assert_eq!(hooks.len(), 1);
+    ///
+    /// // Use the hook
+    /// for (id, hook) in hooks {
+    ///     assert_eq!(id.plugin_id, "logger_plugin");
+    ///     hook.inner().log("Hello from logger!");
+    /// }
+    /// ```
     #[must_use]
     pub fn get_enabled_hooks_by_ep<E: ExtensionPoint>(
         &self,

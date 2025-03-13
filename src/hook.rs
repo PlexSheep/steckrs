@@ -53,7 +53,7 @@
 //! // Get hooks by extension point
 //! let hooks = registry.get_by_extension_point::<Greeter>();
 //! assert_eq!(hooks.len(), 1);
-//! assert_eq!(hooks[0].inner().greet("World"), "Hello, World!");
+//! assert_eq!(hooks[0].1.inner().greet("World"), "Hello, World!");
 //! ```
 
 use std::any::Any;
@@ -631,20 +631,20 @@ impl Debug for BoxedHook {
 /// let good = "jigglypuff";
 /// let long = "this string is too long for the max validator";
 ///
-/// dbg!(hooks[0].name()); // maxhook
-/// dbg!(hooks[1].name()); // minhook
+/// dbg!(hooks[0].1.name()); // maxhook
+/// dbg!(hooks[1].1.name()); // minhook
 ///
 /// // Only the max len passes for the very short one
-/// assert!(hooks[0].inner().validate(short));
-/// assert!(!hooks[1].inner().validate(short));
+/// assert!(hooks[0].1.inner().validate(short));
+/// assert!(!hooks[1].1.inner().validate(short));
 ///
 /// // Both validators pass for good
-/// assert!(hooks[0].inner().validate(good));
-/// assert!(hooks[1].inner().validate(good));
+/// assert!(hooks[0].1.inner().validate(good));
+/// assert!(hooks[1].1.inner().validate(good));
 ///
 /// // Min passes but max fails for long
-/// assert!(!hooks[0].inner().validate(long));
-/// assert!(hooks[1].inner().validate(long));
+/// assert!(!hooks[0].1.inner().validate(long));
+/// assert!(hooks[1].1.inner().validate(long));
 /// ```
 #[derive(Debug, Default)]
 pub struct HookRegistry {
@@ -1072,18 +1072,18 @@ impl HookRegistry {
     /// registry.register(&number_id, number_hook).unwrap();
     ///
     /// dbg!(&registry);
-    /// let validators: Vec<&Hook<_>> = registry.get_by_extension_point::<Validator>();
+    /// let validators: Vec<(&HookID, &Hook<_>)> = registry.get_by_extension_point::<Validator>();
     /// assert_eq!(validators.len(), 2);
     /// // if we want to actually know which is
     /// //which, we can use the name method of the hook to get metadata
-    /// validators.iter().for_each(|v|{dbg!(v.name());});
+    /// validators.iter().for_each(|(_id,v)|{dbg!(v.name());});
     ///
     /// // Test the validators
     /// // 0 is len, 2 is num
-    /// assert!(validators[0].inner().validate("123"));
-    /// assert!(validators[1].inner().validate("123"));
-    /// assert!(validators[0].inner().validate("abc"));
-    /// assert!(!validators[1].inner().validate("abc"));
+    /// assert!(validators[0].1.inner().validate("123"));
+    /// assert!(validators[1].1.inner().validate("123"));
+    /// assert!(validators[0].1.inner().validate("abc"));
+    /// assert!(!validators[1].1.inner().validate("abc"));
     /// ```
     #[must_use]
     pub fn get_by_extension_point<E: ExtensionPoint>(&self) -> Vec<(&HookID, &Hook<E>)> {
