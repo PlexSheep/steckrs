@@ -192,6 +192,7 @@ macro_rules! simple_plugin {
             #[doc = concat!("Description of ", stringify!($plugin_name))]
             pub const DESCRIPTION: &'static str = $description;
 
+            #[doc = concat!("Creates a new ", stringify!($plugin_name))]
             pub fn new() -> Self {
                 Self { enabled: false }
             }
