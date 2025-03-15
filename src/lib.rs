@@ -776,4 +776,72 @@ impl PluginManager {
             })
             .collect()
     }
+
+    /// Gets all mutable hooks of enabled [Plugins](Plugin) for a specific [`ExtensionPoint`] type.
+    ///
+    /// This method filters hooks by both extension point type and plugin enabled status,
+    /// returning only hooks from enabled plugins.
+    ///
+    /// # Type Parameters
+    ///
+    /// - `E`: The [`ExtensionPoint`] type
+    ///
+    /// # Returns
+    ///
+    /// A vector of tuples containing references to [`HookID`](crate::hook::HookID)s and hooks registered for the [`ExtensionPoint`]
+    /// from enabled plugins.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::{extension_point, simple_plugin, PluginManager};
+    ///
+    /// extension_point!(
+    ///     Logger: LoggerTrait;
+    ///     fn log(&self, message: &str);
+    /// );
+    ///
+    /// struct ConsoleLogger;
+    /// impl LoggerTrait for ConsoleLogger {
+    ///     fn log(&self, message: &str) {
+    ///         // In a real implementation, this would print to console
+    ///     }
+    /// }
+    ///
+    /// simple_plugin!(
+    ///     LoggerPlugin,
+    ///     "logger_plugin",
+    ///     "Basic logging plugin",
+    ///     hooks: [(Logger, ConsoleLogger)]
+    /// );
+    ///
+    /// let mut manager = PluginManager::new();
+    /// manager.load_plugin(Box::new(LoggerPlugin::new())).unwrap();
+    /// manager.enable_plugin(LoggerPlugin::ID).unwrap();
+    ///
+    /// // Get all enabled hooks for the Logger extension point
+    /// let hooks = manager.get_enabled_hooks_by_ep::<Logger>();
+    /// assert_eq!(hooks.len(), 1);
+    ///
+    /// // Use the hook
+    /// for (id, hook) in hooks {
+    ///     assert_eq!(id.plugin_id, "logger_plugin");
+    ///     hook.inner().log("Hello from logger!");
+    /// }
+    /// ```
+    #[must_use]
+    pub fn get_enabled_hooks_by_ep_mut<E: ExtensionPoint>(
+        &mut self,
+    ) -> Vec<(&hook::HookID, &mut hook::Hook<E>)> {
+        let enabled_ids: Vec<PluginID> = self
+            .plugins
+            .iter()
+            .filter_map(|(id, plug)| if plug.is_enabled() { Some(*id) } else { None })
+            .collect();
+        self.hook_registry_mut()
+            .get_by_extension_point_mut()
+            .into_iter()
+            .filter(|(id, _hook)| enabled_ids.contains(&id.plugin_id))
+            .collect()
+    }
 }
