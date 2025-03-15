@@ -16,8 +16,8 @@ extension_point!(
     /// document like this
     ///
     /// self is always needed
-    fn can_handle(&self , command: &str) -> bool;
-    fn handle(&self, command: &str, args: &[&str]) -> String;
+    fn can_handle(&mut self , command: &str) -> bool;
+    fn handle(&mut self, command: &str, args: &[&str]) -> String;
 );
 extension_point!(
     ByeExtPoint: ByeExtPointF;
@@ -31,7 +31,7 @@ impl CommandProcessor {
         }
     }
 
-    fn process_command(&self, input: &str) -> String {
+    fn process_command(&mut self, input: &str) -> String {
         let parts: Vec<&str> = input.split_whitespace().collect();
         if parts.is_empty() {
             return "Please enter a command".to_string();
@@ -43,12 +43,12 @@ impl CommandProcessor {
         // Get all enabled hooks (plugins could be disabled)
         let hooks = self
             .plugin_manager
-            .get_enabled_hooks_by_ep::<CommandHandler>();
+            .get_enabled_hooks_by_ep_mut::<CommandHandler>();
 
-        for (_id, hook) in hooks {
+        for (_id, hook) in hooks.into_iter() {
             // NOTE: first come first serve
-            if hook.inner().can_handle(command) {
-                return hook.inner().handle(command, args);
+            if hook.inner_mut().can_handle(command) {
+                return hook.inner_mut().handle(command, args);
             }
         }
 
@@ -69,7 +69,7 @@ impl CommandProcessor {
         Ok(())
     }
 
-    fn end(&self) {
+    fn end(&mut self) {
         let hooks = self.plugin_manager.get_enabled_hooks_by_ep::<ByeExtPoint>();
 
         for (_id, hook) in hooks {
@@ -91,7 +91,7 @@ simple_plugin!(
     "Core commands for the command processor", // Description
     // register hooks for your plugin
     hooks: [
-        (CommandHandler, HelpHook, "help"),         // if you register multiple hooks for an extension point
+        (CommandHandler, {HelpHook::default()}, "help"),         // if you register multiple hooks for an extension point
         (CommandHandler, VersionHook, "version"),   // you need to add a discriminant
         (ByeExtPoint, ByeHook)
     ]
@@ -106,13 +106,20 @@ simple_plugin!(
 );
 
 // Define hoooks into the extension point
-struct HelpHook;
+#[derive(Default)]
+struct HelpHook {
+    already_helped: bool, // you can even have local context
+}
 impl CommandHandlerFunctions for HelpHook {
-    fn can_handle(&self, command: &str) -> bool {
+    fn can_handle(&mut self, command: &str) -> bool {
         command == "help"
     }
 
-    fn handle(&self, _command: &str, _args: &[&str]) -> String {
+    fn handle(&mut self, _command: &str, _args: &[&str]) -> String {
+        if self.already_helped {
+            eprintln!("okaaaaaaaay... helping agaaaaaaaaain....");
+        }
+        self.already_helped |= true;
         "Available commands: help, version, echo".to_string()
     }
 }
@@ -120,11 +127,11 @@ impl CommandHandlerFunctions for HelpHook {
 // Version command handler
 struct VersionHook;
 impl CommandHandlerFunctions for VersionHook {
-    fn can_handle(&self, command: &str) -> bool {
+    fn can_handle(&mut self, command: &str) -> bool {
         command == "version"
     }
 
-    fn handle(&self, _command: &str, _args: &[&str]) -> String {
+    fn handle(&mut self, _command: &str, _args: &[&str]) -> String {
         "Command Processor v1.0.0".to_string()
     }
 }
@@ -132,11 +139,11 @@ impl CommandHandlerFunctions for VersionHook {
 // Echo command handler
 struct EchoHook;
 impl CommandHandlerFunctions for EchoHook {
-    fn can_handle(&self, command: &str) -> bool {
+    fn can_handle(&mut self, command: &str) -> bool {
         command == "echo"
     }
 
-    fn handle(&self, _command: &str, args: &[&str]) -> String {
+    fn handle(&mut self, _command: &str, args: &[&str]) -> String {
         args.join(" ")
     }
 }
@@ -159,6 +166,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "version",
         "echo Hello, Plugin System!",
         "thiscommanddoesnotexist",
+        "help", // helps again, uses context of help hook
     ];
 
     for cmd in &commands {
