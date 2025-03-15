@@ -788,7 +788,7 @@ impl PluginManager {
     ///
     /// # Returns
     ///
-    /// A vector of tuples containing references to [`HookID`](crate::hook::HookID)s and hooks registered for the [`ExtensionPoint`]
+    /// A vector of tuples containing mutable references to [`HookID`](crate::hook::HookID)s and hooks registered for the [`ExtensionPoint`]
     /// from enabled plugins.
     ///
     /// # Examples

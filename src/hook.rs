@@ -952,7 +952,7 @@ impl HookRegistry {
     ///
     /// # Returns
     ///
-    /// - `Some(&Hook<E>)` if the hook was found
+    /// - `Some(&mut Hook<E>)` if the hook was found
     /// - `None` if no hook with the given ID was found for the extension point
     ///
     /// # Examples
@@ -1043,7 +1043,7 @@ impl HookRegistry {
     ///
     /// # Returns
     ///
-    /// - `Some(&BoxedHook)` if the hook was found
+    /// - `Some(&mut BoxedHook)` if the hook was found
     /// - `None` if no hook with the given ID was found
     ///
     /// # Examples
@@ -1146,7 +1146,7 @@ impl HookRegistry {
     ///
     /// # Returns
     ///
-    /// A vector of references to all hooks registered by the plugin
+    /// A vector of mutable references to all hooks registered by the plugin
     ///
     /// # Examples
     ///
@@ -1267,7 +1267,7 @@ impl HookRegistry {
     ///
     /// # Returns
     ///
-    /// A vector of references to hooks that match the filter
+    /// A vector of mutable references to hooks that match the filter
     ///
     /// # Examples
     ///
@@ -1406,7 +1406,7 @@ impl HookRegistry {
     ///
     /// # Returns
     ///
-    /// A vector of references to all hooks registered for the [`ExtensionPoint`]
+    /// A vector of mutable references to all hooks registered for the [`ExtensionPoint`]
     ///
     /// # Examples
     ///
