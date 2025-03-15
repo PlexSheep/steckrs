@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.2](https://github.com/PlexSheep/steckrs/compare/v0.3.1...v0.3.2)
+
+### ⛰️ Features
+
+- Introduce mutable versions of all get-hook-functions - ([3bb68d4](https://github.com/PlexSheep/steckrs/commit/3bb68d46cdef81d105d77390f8bb748d4cb80592))
+
+### 🐛 Bug Fixes
+
+- Macros now accept datatypes that are not unit structs - ([a25ba29](https://github.com/PlexSheep/steckrs/commit/a25ba29b741f06f368dabf703eaf2b08ebb7c130))
+
+### 📚 Documentation
+
+- Adjust return types for mutable functions - ([c409e82](https://github.com/PlexSheep/steckrs/commit/c409e829eb9edc1042efadba16b0e944a3916c2a))
+- Example now shows a mutable hook too - ([e865dd7](https://github.com/PlexSheep/steckrs/commit/e865dd794628594f64fbef55a99204898414ab79))
+
+
 ## [0.3.1](https://github.com/PlexSheep/steckrs/compare/v0.3.0...v0.3.1)
 
 ### 📚 Documentation
