@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/PlexSheep/steckrs/compare/v0.3.2...v0.3.3)
+
+### ⛰️ Features
+
+- Automatically document the new method with simple_plugin - ([f4f2c66](https://github.com/PlexSheep/steckrs/commit/f4f2c66cc32f4d4199c6d9434cb1c7644d597355))
+
+
 ## [0.3.2](https://github.com/PlexSheep/steckrs/compare/v0.3.1...v0.3.2)
 
 ### ⛰️ Features
