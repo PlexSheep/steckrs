@@ -179,7 +179,7 @@ macro_rules! simple_plugin {
         $plugin_name:ident,
         $plugin_id:expr,
         $description:expr,
-        hooks: [$(($extension_point:ident, $hook_impl:ident $(, $discrim:expr)?)),* $(,)?]) => {
+        hooks: [$(($extension_point:ident, $hook_impl:expr $(, $discrim:expr)?)),* $(,)?]) => {
         $(#[$plugin_meta])*
         #[derive(Debug)]
         pub struct $plugin_name {
@@ -286,7 +286,7 @@ macro_rules! simple_plugin {
 /// ```
 #[macro_export]
 macro_rules! register_hook {
-    ($registry_mut:expr, $plugin_id:expr, $extension_point:ident, $hook:ident) => {
+    ($registry_mut:expr, $plugin_id:expr, $extension_point:ident, $hook:expr) => {
         $registry_mut
             .register(
                 &$crate::hook::HookID::new(
@@ -296,12 +296,12 @@ macro_rules! register_hook {
                 ),
                 $crate::hook::Hook::<$extension_point>::new(
                     Box::new($hook),
-                    std::any::type_name::<$hook>(),
+                    std::any::type_name_of_val(&$hook),
                 ),
             )
             .expect("could not register hook")
     };
-    ($registry_mut:expr, $plugin_id:expr, $extension_point:ident, $hook:ident, $discriminator:expr) => {
+    ($registry_mut:expr, $plugin_id:expr, $extension_point:ident, $hook:expr, $discriminator:expr) => {
         $registry_mut
             .register(
                 &$crate::hook::HookID::new(
@@ -311,7 +311,7 @@ macro_rules! register_hook {
                 ),
                 $crate::hook::Hook::<$extension_point>::new(
                     Box::new($hook),
-                    std::any::type_name::<$hook>(),
+                    std::any::type_name_of_val(&$hook),
                 ),
             )
             .expect("could not register hook")
