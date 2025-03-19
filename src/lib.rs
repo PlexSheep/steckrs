@@ -1001,6 +1001,19 @@ impl PluginManager {
             .filter(|(id, _hook)| enabled_ids.contains(&id.plugin_id))
             .collect()
     }
+
+    /// Gets a list of all plugins with their IDs and enabled status.
+    ///
+    /// This method returns a vector of tuples, where each tuple contains:
+    /// - The [`PluginID`] of the plugin
+    /// - A boolean indicating whether the plugin is enabled
+    #[must_use]
+    pub fn list_plugins(&self) -> Vec<(PluginID, bool)> {
+        self.plugins()
+            .iter()
+            .map(|plugin| (plugin.id(), plugin.is_enabled()))
+            .collect()
+    }
 }
 
 #[cfg(test)]
