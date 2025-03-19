@@ -186,15 +186,30 @@ pub struct PluginIDOwned {
     inner: &'static str,
 }
 
+impl PluginIDOwned {
+    /// Get the inner [`PluginID`]
+    #[inline]
+    #[must_use]
+    pub fn id(&self) -> PluginID {
+        self.inner
+    }
+}
+
 impl From<PluginID> for PluginIDOwned {
     fn from(value: PluginID) -> Self {
         Self { inner: value }
     }
 }
 
+impl From<&PluginIDOwned> for PluginID {
+    fn from(value: &PluginIDOwned) -> Self {
+        value.id()
+    }
+}
+
 impl From<PluginIDOwned> for PluginID {
     fn from(value: PluginIDOwned) -> Self {
-        value.inner
+        value.id()
     }
 }
 
