@@ -145,11 +145,11 @@ use self::hook::{ExtensionPoint, HookRegistry};
 pub type PluginID = &'static str;
 
 /// An owned version of [`PluginID`] that can be owned and has optional serialization support with
-/// [serde].
+/// `serde`.
 ///
 /// This type wraps a static string reference and provides implementations for
 /// conversion to/from [`PluginID`], as well as serialization support when the
-/// [`serde`] feature is enabled.
+/// `serde` feature is enabled.
 ///
 /// This type is particularly useful when working with serialization frameworks,
 /// as it allows plugin identifiers to be properly serialized and deserialized.
@@ -174,15 +174,16 @@ pub type PluginID = &'static str;
 ///
 /// assert_eq!(plugin_id, plugin_id2);
 /// ```
-///
-/// # Serialization
-///
-/// When the `serde` feature is enabled, this type implements [`Serialize`](serde::Serialize)
-/// and [`Deserialize`](serde::Deserialize). Note that deserialization involves a memory leak,
-/// as the string is converted to a `&'static str` by leaking memory (to make sure it is always
-/// existing in memory).
-///
-/// The leaking is using safe rust with [`String::leak`].
+#[cfg_attr(feature = "serde", doc = concat!(
+r"# Serialization
+
+When the `serde` feature is enabled, this type implements [`Serialize`]
+and [`Deserialize`]. Note that deserialization involves a memory leak,
+as the string is converted to a `&'static str` by leaking memory (to make sure it is always
+existing in memory).
+
+The leaking is using safe rust with [`String::leak`]."
+))]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize), serde(transparent))]
 pub struct PluginIDOwned {
@@ -223,7 +224,7 @@ impl std::fmt::Display for PluginIDOwned {
 }
 
 #[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for PluginIDOwned {
+impl<'de> Deserialize<'de> for PluginIDOwned {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
