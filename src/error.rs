@@ -20,7 +20,7 @@
 //! - [`PluginResult<T>`]: Results from plugin operations
 //! - [`HookResult<T>`]: Results from hook operations
 
-use crate::PluginID;
+use crate::PluginIDOwned;
 
 /// Result type for plugin operations
 pub type HookResult<T> = Result<T, HookError>;
@@ -33,14 +33,15 @@ pub type PluginResult<T> = Result<T, PluginError>;
 /// These errors can occur during plugin loading, unloading, enabling,
 /// disabling, or other plugin management operations.
 #[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum PluginError {
     /// A [Plugin](crate::Plugin) is already loaded
     #[error("{0} was already loaded")]
-    AlreadyLoaded(PluginID),
+    AlreadyLoaded(PluginIDOwned),
 
     /// A [Plugin](crate::Plugin) was requested that is not registered
     #[error("Plugin not found: {0}")]
-    NotFound(PluginID),
+    NotFound(PluginIDOwned),
 
     /// Something went wrong when working with hooks
     #[error("Hook error: {0}")]
@@ -52,6 +53,7 @@ pub enum PluginError {
 /// These errors can occur during hook registration, deregistration,
 /// or other hook management operations.
 #[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum HookError {
     /// Indicates a hook with the same ID is already registered.
     #[error("Tried to register to a hook that already exists")]

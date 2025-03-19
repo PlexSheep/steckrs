@@ -128,7 +128,39 @@ use self::hook::{ExtensionPoint, HookRegistry};
 /// Plugin identifier type.
 ///
 /// Every plugin must have a unique identifier.
+///
+/// # Examples
+///
+/// ```
+/// let id: steckrs::PluginID = "hello_world_plugin";
+/// ```
 pub type PluginID = &'static str;
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct PluginIDOwned {
+    inner: String,
+}
+
+impl From<PluginID> for PluginIDOwned {
+    fn from(value: PluginID) -> Self {
+        Self {
+            inner: value.into(),
+        }
+    }
+}
+
+impl From<PluginIDOwned> for PluginID {
+    fn from(value: PluginIDOwned) -> Self {
+        value.inner.leak::<'static>()
+    }
+}
+
+impl std::fmt::Display for PluginIDOwned {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.inner, f)
+    }
+}
 
 /// Plugin trait that must be implemented by all plugins.
 ///
@@ -408,7 +440,7 @@ impl PluginManager {
     pub fn load_plugin(&mut self, mut plugin: Box<dyn Plugin>) -> PluginResult<()> {
         let id = plugin.id();
         if self.plugins.contains_key(id) {
-            return Err(error::PluginError::AlreadyLoaded(id));
+            return Err(error::PluginError::AlreadyLoaded(id.into()));
         }
 
         // register the hooks
@@ -668,7 +700,7 @@ impl PluginManager {
                 plugin.enable();
                 Ok(())
             }
-            None => Err(error::PluginError::NotFound(id)),
+            None => Err(error::PluginError::NotFound(id.into())),
         }
     }
 
@@ -704,7 +736,7 @@ impl PluginManager {
                 plugin.disable();
                 Ok(())
             }
-            None => Err(error::PluginError::NotFound(id)),
+            None => Err(error::PluginError::NotFound(id.into())),
         }
     }
 

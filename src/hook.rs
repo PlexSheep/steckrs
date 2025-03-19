@@ -342,7 +342,7 @@ impl<E: ExtensionPoint> Hook<E> {
     /// let hook = Hook::<Validator>::new(Box::new(LengthValidator), "myhook");
     /// ```
     #[must_use]
-    pub fn new(hook: Box<E::HookTrait>, name: &'static str) -> Self {
+    pub fn new(hook: Box<E::HookTrait>, name: PluginID) -> Self {
         Hook {
             inner: hook,
             hook_t: PhantomData,
@@ -1541,5 +1541,30 @@ impl HookRegistry {
             self.deregister(&id)
                 .expect("could not deregister a hook that we know exists");
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::*;
+
+    #[test]
+    fn test_hook_with_owned_plugin_id() {
+        extension_point!(
+            Validator: ValidatorTrait;
+            fn validate(&self, input: &str) -> bool;
+        );
+
+        struct LengthValidator;
+        impl ValidatorTrait for LengthValidator {
+            fn validate(&self, input: &str) -> bool {
+                input.len() > 5
+            }
+        }
+
+        let id = PluginIDOwned::from("foo");
+        let hook = Hook::<Validator>::new(Box::new(LengthValidator), id.into());
+        assert!(hook.inner().validate("this is long enough"));
     }
 }
