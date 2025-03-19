@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0](https://github.com/PlexSheep/steckrs/compare/v0.3.4...v0.4.0)
+
+### ⛰️ Features
+
+- Add more utility for &PluginIDOwned - ([5d0b807](https://github.com/PlexSheep/steckrs/commit/5d0b8074a228a3b7e2592e49185258f87564aa51))
+
+### 🚜 Refactor
+
+- [**breaking**] Make PluginIDOwned transparent in serialize/deserialize - ([cfa364a](https://github.com/PlexSheep/steckrs/commit/cfa364accc5f0861dcfc812115d54b9aa6afb302))
+
+### 📚 Documentation
+
+- Fix documentation features - ([7e49b04](https://github.com/PlexSheep/steckrs/commit/7e49b0465fe0e6288afbeb38a365d4c9c623d260))
+
+
 ## [0.3.4](https://github.com/PlexSheep/steckrs/compare/v0.3.3...v0.3.4)
 
 ### ⛰️ Features
