@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.4](https://github.com/PlexSheep/steckrs/compare/v0.3.3...v0.3.4)
+
+### ⛰️ Features
+
+- Add plugin_is_enabled method for manager - ([3912944](https://github.com/PlexSheep/steckrs/commit/391294439185fa00aad80f8e6b59ce400936f4d9))
+- Add PluginIDOwned and optional serde support - ([a622555](https://github.com/PlexSheep/steckrs/commit/a62255515f3201b4e60716848ef3fbfae816482d))
+
+### 🚜 Refactor
+
+- PluginIdOwned now only has a &'static str inside - ([ff54dd8](https://github.com/PlexSheep/steckrs/commit/ff54dd83a0074a7072057b9bee48a54542f3c045))
+
+### 📚 Documentation
+
+- Document PluginIDOwned - ([6c53d6d](https://github.com/PlexSheep/steckrs/commit/6c53d6d774d9402e78149fcaca0b2e612a8dfb82))
+
+
 ## [0.3.3](https://github.com/PlexSheep/steckrs/compare/v0.3.2...v0.3.3)
 
 ### ⛰️ Features
