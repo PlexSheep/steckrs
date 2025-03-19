@@ -137,28 +137,56 @@ use self::hook::{ExtensionPoint, HookRegistry};
 pub type PluginID = &'static str;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct PluginIDOwned {
-    inner: String,
+    inner: &'static str,
 }
 
 impl From<PluginID> for PluginIDOwned {
     fn from(value: PluginID) -> Self {
-        Self {
-            inner: value.into(),
-        }
+        Self { inner: value }
     }
 }
 
 impl From<PluginIDOwned> for PluginID {
     fn from(value: PluginIDOwned) -> Self {
-        value.inner.leak::<'static>()
+        value.inner
     }
 }
 
 impl std::fmt::Display for PluginIDOwned {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Display::fmt(&self.inner, f)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for PluginIDOwned {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct PluginIDVisitor;
+
+        impl serde::de::Visitor<'_> for PluginIDVisitor {
+            type Value = PluginIDOwned;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a string")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(PluginIDOwned {
+                    // Convert the string to a 'static str by leaking memory
+                    inner: value.to_string().leak(),
+                })
+            }
+        }
+
+        deserializer.deserialize_str(PluginIDVisitor)
     }
 }
 
