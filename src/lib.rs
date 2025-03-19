@@ -127,7 +127,12 @@ use self::hook::{ExtensionPoint, HookRegistry};
 
 /// Plugin identifier type.
 ///
-/// Every plugin must have a unique identifier.
+/// Every plugin must have a unique identifier. This type is used to identify plugins within
+/// the [steckrs](crate) system. It's implemented as a static string reference for efficiency and
+/// simplicity.
+///
+/// See also [`PluginIDOwned`], which can be owned and provides serialization support, if you need
+/// that.
 ///
 /// # Examples
 ///
@@ -136,6 +141,45 @@ use self::hook::{ExtensionPoint, HookRegistry};
 /// ```
 pub type PluginID = &'static str;
 
+/// An owned version of [`PluginID`] that can be owned and has optional serialization support with
+/// [serde].
+///
+/// This type wraps a static string reference and provides implementations for
+/// conversion to/from [`PluginID`], as well as serialization support when the
+/// [`serde`] feature is enabled.
+///
+/// This type is particularly useful when working with serialization frameworks,
+/// as it allows plugin identifiers to be properly serialized and deserialized.
+///
+/// If you deserialize a string into this datastructure, please note that this uses an internal
+/// leak mechanism ([`String::leak`]) to make sure that the actual data of the plugin id will always exist (making it
+/// `'static`). That means that you may take up more memory than expected if you deserialize huge
+/// amoungs of plugin ids.
+///
+/// # Examples
+///
+/// ```
+/// use steckrs::{PluginIDOwned, PluginID};
+///
+/// let plugin_id: PluginID = "my_plugin";
+///
+/// // Create from owned id
+/// let id = PluginIDOwned::from(plugin_id);
+///
+/// // Convert back to a PluginID
+/// let plugin_id2: PluginID = id.into();
+///
+/// assert_eq!(plugin_id, plugin_id2);
+/// ```
+///
+/// # Serialization
+///
+/// When the `serde` feature is enabled, this type implements [`Serialize`](serde::Serialize)
+/// and [`Deserialize`](serde::Deserialize). Note that deserialization involves a memory leak,
+/// as the string is converted to a `&'static str` by leaking memory (to make sure it is always
+/// existing in memory).
+///
+/// The leaking is using safe rust with [`String::leak`].
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct PluginIDOwned {
