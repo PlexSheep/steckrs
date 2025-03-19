@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/PlexSheep/steckrs/compare/v0.4.0...v0.4.1)
+
+### ⛰️ Features
+
+- Add list_plugins - ([1930042](https://github.com/PlexSheep/steckrs/commit/1930042da18228f4d25546f13382fadce4c0f70c))
+
+
 ## [0.4.0](https://github.com/PlexSheep/steckrs/compare/v0.3.4...v0.4.0)
 
 ### ⛰️ Features
