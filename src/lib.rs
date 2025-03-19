@@ -116,6 +116,9 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 pub mod error;
 pub mod hook;
 pub mod macros;
@@ -181,7 +184,7 @@ pub type PluginID = &'static str;
 ///
 /// The leaking is using safe rust with [`String::leak`].
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(Serialize), serde(transparent))]
 pub struct PluginIDOwned {
     inner: &'static str,
 }
@@ -996,5 +999,26 @@ impl PluginManager {
             .into_iter()
             .filter(|(id, _hook)| enabled_ids.contains(&id.plugin_id))
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_ser_dser_pluginid() {
+        let some_id: PluginID = "foo";
+        let oid = PluginIDOwned::from(some_id);
+        let serial = serde_json::to_string(&oid).unwrap();
+        assert_eq!(serial, r#""foo""#);
+
+        let raw = r#""myid""#;
+        let oid: PluginIDOwned = serde_json::from_str(raw).unwrap();
+        let id = oid.id();
+        let serial: String = serde_json::to_string(&id).unwrap();
+
+        assert_eq!(raw, format!(r#""{id}""#));
+        assert_eq!(serial, raw);
     }
 }
