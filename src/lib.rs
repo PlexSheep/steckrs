@@ -667,6 +667,40 @@ impl PluginManager {
             .collect()
     }
 
+    /// Quickly check if a [`Plugin`] with a specific [`PluginID`] is enabled.
+    ///
+    /// This will return [`None`] if the [`Plugin`] with that [`PluginID`] was not found, otherwise
+    /// `Some(enabled)`, where `enabled` is gotten with [`Plugin::is_enabled`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use steckrs::{PluginManager, simple_plugin};
+    ///
+    /// simple_plugin!(
+    ///     Plugin,
+    ///     "plugin",
+    ///     "Some plugin",
+    ///     hooks: []
+    /// );
+    ///
+    /// let mut manager = PluginManager::new();
+    /// manager.load_plugin(Box::new(Plugin::new())).unwrap();
+    /// manager.enable_plugin("plugin").unwrap();
+    ///
+    /// assert_eq!(manager.plugin_is_enabled("plugin"), Some(true));
+    /// assert_eq!(manager.plugin_is_enabled("nope"), None);
+    ///
+    /// manager.disable_plugin("plugin").unwrap();
+    ///
+    /// assert_eq!(manager.plugin_is_enabled("plugin"), Some(false));
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn plugin_is_enabled(&self, id: PluginID) -> Option<bool> {
+        Some(self.plugins.get(id)?.is_enabled())
+    }
+
     /// Enables a plugin by ID.
     ///
     /// Note that plugins are disabled by default
